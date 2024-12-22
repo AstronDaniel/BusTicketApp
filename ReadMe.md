@@ -208,3 +208,18 @@ const printReceipt = async (details) => {
 ## **Conclusion**
 This app provides a streamlined solution for generating and printing bus tickets directly from a mobile device. By leveraging Expo, it ensures a faster development cycle, cross-platform compatibility, and efficient performance. Additional features can be easily integrated for extended functionality.
 
+## App Ui
+## Login Screen
+![Login screen](assets/ui/image.png)
+
+## Register Screen
+![Register screen](assets/ui/image-1.png)
+
+## Home Screen Screen
+![Home Screen](assets/ui/image-2.png)
+
+## Generate Receipt Screen
+![alt text](assets/ui/image-3.png)
+
+## Receipt Preview 
+![alt text](assets/ui/image.png)

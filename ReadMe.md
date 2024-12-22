@@ -1,4 +1,4 @@
-9# **Documentation for Bus Ticket App using Expo (React Native)**
+## **Documentation for Bus Ticket App using Expo (React Native)**
 
 ## **Introduction**
 This documentation outlines the development of a mobile application using Expo (React Native framework) to generate and print bus ticket receipts. The app allows users to input details, generate a receipt, and print it using a Bluetooth thermal printer.

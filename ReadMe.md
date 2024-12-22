@@ -57,6 +57,13 @@ expo install react-native-paper expo-print expo-sharing react-native-qrcode-svg
 npm install react-native-bluetooth-escpos-printer
 ```
 
+### 4. Start the App
+Run the app locally with Expo:
+```bash
+npm start
+```
+Open the Expo Go app on your device and scan the QR code.
+
 ---
 
 ## **App Development**

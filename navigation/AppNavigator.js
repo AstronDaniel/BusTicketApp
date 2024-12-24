@@ -19,7 +19,7 @@ export default function AppNavigator() {
 
   return (
     <NavigationContainer>
-      <Stack.Navigator>
+      <Stack.Navigator initialRouteName="Login">
         {user ? (
           // Authenticated Screens
           <>
@@ -33,7 +33,6 @@ export default function AppNavigator() {
               component={GenerateReceiptScreen}
               options={{ title: "Generate Receipt" }}
             />
-             
             <Stack.Screen
               name="LocationSelection"
               component={LocationSelectionScreen} // Ensure this component is correctly referenced
@@ -61,12 +60,12 @@ export default function AppNavigator() {
             <Stack.Screen
               name="Login"
               component={LoginScreen}
-              options={{ title: "Login" }}
+              options={{ headerShown: false }}
             />
             <Stack.Screen
               name="Register"
               component={RegisterScreen}
-              options={{ title: "Register" }}
+              options={{ headerShown: false }}
             />
           </>
         )}

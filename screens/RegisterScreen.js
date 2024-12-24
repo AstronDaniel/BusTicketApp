@@ -1,4 +1,4 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import { 
   View, 
   Text, 
@@ -9,10 +9,14 @@ import {
   ScrollView,
   KeyboardAvoidingView,
   Platform,
-  Image
+  Image,
+  ActivityIndicator
 } from "react-native";
 import { Ionicons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from "@react-native-community/netinfo";
+import { registerUser, syncData } from "../services/auth.service";
 
 const RegisterScreen = ({ navigation }) => {
   const [formData, setFormData] = useState({
@@ -25,6 +29,7 @@ const RegisterScreen = ({ navigation }) => {
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showConfirmPassword, setShowConfirmPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
 
   const handleChange = (field, value) => {
     setFormData(prev => ({
@@ -33,11 +38,16 @@ const RegisterScreen = ({ navigation }) => {
     }));
   };
 
-  const handleRegister = () => {
+  const handleRegister = async () => {
     const { firstName, lastName, email, phone, password, confirmPassword } = formData;
 
     if (!firstName || !lastName || !email || !phone || !password || !confirmPassword) {
       Alert.alert("Error", "All fields are required.");
+      return;
+    }
+
+    if (password.length < 6) {
+      Alert.alert("Error", "Password must be at least 6 characters long.");
       return;
     }
 
@@ -46,11 +56,30 @@ const RegisterScreen = ({ navigation }) => {
       return;
     }
 
-    // Mock registration logic (replace with API call)
-    Alert.alert("Success", "Account created successfully!", [
-      { text: "OK", onPress: () => navigation.navigate("Login") },
-    ]);
+    setLoading(true);
+
+    try {
+      await registerUser(formData);
+      Alert.alert("Success", "Account created successfully!");
+      navigation.navigate("Login");
+    } catch (error) {
+      Alert.alert("Error", error.message);
+    } finally {
+      setLoading(false);
+    }
   };
+
+  useEffect(() => {
+    const unsubscribe = NetInfo.addEventListener(state => {
+      if (state.isConnected) {
+        syncData();
+      }
+    });
+
+    return () => {
+      unsubscribe();
+    };
+  }, []);
 
   return (
     <KeyboardAvoidingView 
@@ -81,7 +110,7 @@ const RegisterScreen = ({ navigation }) => {
               <Text style={styles.label}>First Name</Text>
               <TextInput
                 style={styles.input}
-                placeholder="John"
+                placeholder="First name"
                 value={formData.firstName}
                 onChangeText={(value) => handleChange("firstName", value)}
               />
@@ -90,7 +119,7 @@ const RegisterScreen = ({ navigation }) => {
               <Text style={styles.label}>Last Name</Text>
               <TextInput
                 style={styles.input}
-                placeholder="Doe"
+                placeholder="Last Name"
                 value={formData.lastName}
                 onChangeText={(value) => handleChange("lastName", value)}
               />
@@ -115,7 +144,7 @@ const RegisterScreen = ({ navigation }) => {
             <Ionicons name="call-outline" size={20} color="#666" style={styles.inputIcon} />
             <TextInput
               style={styles.inputField}
-              placeholder="+1 (234) 567-8900"
+              placeholder="(+256)123-456-789"
               keyboardType="phone-pad"
               value={formData.phone}
               onChangeText={(value) => handleChange("phone", value)}
@@ -161,7 +190,11 @@ const RegisterScreen = ({ navigation }) => {
           </View>
 
           <TouchableOpacity style={styles.button} onPress={handleRegister}>
-            <Text style={styles.buttonText}>Create Account</Text>
+            {loading ? (
+              <ActivityIndicator size="small" color="#fff" />
+            ) : (
+              <Text style={styles.buttonText}>Create Account</Text>
+            )}
           </TouchableOpacity>
 
           <View style={styles.loginContainer}>
@@ -197,6 +230,15 @@ const styles = StyleSheet.create({
     color: "#333",
     marginBottom: 8,
     fontFamily: Platform.OS === 'ios' ? 'System' : 'Roboto',
+  },
+  input:{
+    borderWidth: 1,
+    borderColor: "#ddd",
+    borderRadius: 12,
+    padding: 12,
+    fontSize: 16,
+    color: "#333",
+    backgroundColor: "#fff",
   },
   subtitle: {
     fontSize: 16,
@@ -250,15 +292,6 @@ const styles = StyleSheet.create({
     paddingVertical: 12,
     fontSize: 16,
     color: "#333",
-  },
-  input: {
-    borderWidth: 1,
-    borderColor: "#ddd",
-    borderRadius: 12,
-    padding: 12,
-    fontSize: 16,
-    color: "#333",
-    backgroundColor: "#fff",
   },
   button: {
     backgroundColor: "#007AFF",

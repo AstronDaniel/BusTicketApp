@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "211686347209",
+    "firebase_url": "https://transportation-9c419-default-rtdb.firebaseio.com",
+    "project_id": "transportation-9c419",
+    "storage_bucket": "transportation-9c419.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:211686347209:android:795ee73977635a89711818",
+        "android_client_info": {
+          "package_name": "com.android.unigo"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTcK9zqnnn5lTM-Zy-gVvnEhLPJao8Ceo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:211686347209:android:0211980352b6618c711818",
+        "android_client_info": {
+          "package_name": "com.link.receiptGenerator"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyDTcK9zqnnn5lTM-Zy-gVvnEhLPJao8Ceo"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

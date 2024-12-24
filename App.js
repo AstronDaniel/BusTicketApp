@@ -2,6 +2,8 @@ import React from "react";
 import { AuthProvider } from "./contexts/AuthContext";
 import AppNavigator from "./navigation/AppNavigator";
 import { Provider as PaperProvider, DefaultTheme } from "react-native-paper";
+import { StatusBar } from 'react-native';
+import './config/firebase'; // Ensure Firebase is initialized
 
 const theme = {
   ...DefaultTheme,
@@ -18,6 +20,7 @@ export default function App() {
   return (
     <AuthProvider>
       <PaperProvider theme={theme}>
+        <StatusBar barStyle="dark-content" />
         <AppNavigator />
       </PaperProvider>
     </AuthProvider>

@@ -10,32 +10,71 @@ import {
   Platform,
   StatusBar,
   Image,
-  ScrollView
+  ScrollView,
+  ActivityIndicator
 } from "react-native";
 import { LinearGradient } from 'expo-linear-gradient';
 import { Ionicons } from '@expo/vector-icons';
 import * as Animatable from 'react-native-animatable';
+import AsyncStorage from '@react-native-async-storage/async-storage';
+import NetInfo from "@react-native-community/netinfo";
 import { AuthContext } from "../contexts/AuthContext";
+import { loginUser } from "../services/auth.service";
 
 const LoginScreen = ({ navigation }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
+  const [loading, setLoading] = useState(false);
   const { login } = useContext(AuthContext);
 
-  const handleLogin = () => {
+  const handleLogin = async () => {
     if (!email || !password) {
       Alert.alert("Error", "Please fill in all fields");
       return;
     }
 
-    // Dummy authentication logic (replace with actual API call if needed)
-    if (email === "user@example.com" && password === "password123") {
-      const userData = { email };
-      login(userData); // Set the user context
-    } else {
-      Alert.alert("Invalid Credentials", "Please check your email and password.");
-    }
+    setLoading(true);
+
+    NetInfo.fetch().then(async state => {
+      if (state.isConnected) {
+        // Online login
+        try {
+          const user = await loginUser(email, password);
+          login(user); // Set the user context
+          setLoading(false);
+        } catch (error) {
+          console.error("Login User Error:", error);
+          Alert.alert("Login Failed", error.message);
+          setLoading(false);
+        }
+      } else {
+        // Offline login using local data
+        try {
+          const localData = await AsyncStorage.getItem('userData');
+          if (localData) {
+            const localUserData = JSON.parse(localData);
+            if (localUserData.email === email && localUserData.password === password) {
+              login(localUserData); // Set the user context with local data
+              setLoading(false);
+            } else {
+              Alert.alert("Login Failed", "Invalid email or password.");
+              setLoading(false);
+            }
+          } else {
+            Alert.alert("Login Failed", "No local data found. Please connect to the internet and try again.");
+            setLoading(false);
+          }
+        } catch (error) {
+          console.error("Offline Login Error:", error);
+          Alert.alert("Login Failed", "An error occurred while accessing local data.");
+          setLoading(false);
+        }
+      }
+    }).catch(error => {
+      console.error("Network Status Error:", error);
+      setLoading(false);
+    });
   };
 
   return (
@@ -118,7 +157,11 @@ const LoginScreen = ({ navigation }) => {
                 start={{ x: 0, y: 0 }}
                 end={{ x: 1, y: 0 }}
               >
-                <Text style={styles.loginButtonText}>Sign In</Text>
+                {loading ? (
+                  <ActivityIndicator size="small" color="#fff" />
+                ) : (
+                  <Text style={styles.loginButtonText}>Sign In</Text>
+                )}
               </LinearGradient>
             </TouchableOpacity>
 

@@ -15,6 +15,7 @@
     "@react-navigation/stack": "^7.1.1",
     "axios": "^1.7.9",
     "expo": "~52.0.20",
+    "expo-blur": "^14.0.1",
     "expo-linear-gradient": "^14.0.1",
     "expo-print": "^14.0.2",
     "expo-sharing": "^13.0.0",
@@ -24,7 +25,11 @@
     "react-native": "0.76.5",
     "react-native-animatable": "^1.4.0",
     "react-native-bluetooth-escpos-printer": "^0.0.5",
-    "react-native-paper": "^5.12.5"
+    "react-native-dropdown-picker": "^5.4.6",
+    "react-native-keyboard-aware-scroll-view": "^0.9.5",
+    "react-native-mask-text": "^0.14.2",
+    "react-native-paper": "^5.12.5",
+    "react-native-qrcode-svg": "^6.3.12"
   },
   "devDependencies": {
     "@babel/core": "^7.20.0"

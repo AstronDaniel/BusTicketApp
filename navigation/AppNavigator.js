@@ -7,8 +7,10 @@ import { AuthContext } from "../contexts/AuthContext";
 import LoginScreen from "../screens/LoginScreen";
 import RegisterScreen from "../screens/RegisterScreen";
 import HomeScreen from "../screens/HomeScreen";
-import ReceiptDetailsScreen from "../screens/ReceiptDetailsScreen";
+
+import ReceiptPreview from "../screens/ReceiptPreview";
 import GenerateReceiptScreen from "../screens/GenerateReceiptScreen";
+import LocationSelectionScreen from "../screens/LocationSelectionScreen"; // Ensure this import is correct
 
 const Stack = createStackNavigator();
 
@@ -31,10 +33,26 @@ export default function AppNavigator() {
               component={GenerateReceiptScreen}
               options={{ title: "Generate Receipt" }}
             />
+             
             <Stack.Screen
-              name="ReceiptDetails"
-              component={ReceiptDetailsScreen}
-              options={{ title: "Receipt Details" }}
+              name="LocationSelection"
+              component={LocationSelectionScreen} // Ensure this component is correctly referenced
+            />
+            <Stack.Screen
+              name="PaymentStatus"
+              component={LocationSelectionScreen}
+              initialParams={{
+                type: "payment",
+                locations: [
+                  { id: "cash", name: "Cash" },
+                  { id: "pending", name: "Pending" },
+                ],
+              }}
+            />
+            <Stack.Screen
+              name="ReceiptPreview"
+              component={ReceiptPreview}
+              options={{ title: "Receipt Preview" }}
             />
           </>
         ) : (

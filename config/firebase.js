@@ -22,7 +22,9 @@ if (!firebase.apps.length) {
         if (err.code === 'failed-precondition') {
           console.error('Multiple tabs open, persistence can only be enabled in one tab at a time.');
         } else if (err.code === 'unimplemented') {
-          console.error('The current browser does not support persistence.');
+          console.error('The current platform does not support persistence. Falling back to memory cache.');
+        } else {
+          console.error('Error enabling persistence:', err);
         }
       });
   } catch (error) {

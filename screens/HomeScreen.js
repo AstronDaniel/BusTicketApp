@@ -1,24 +1,34 @@
-import React, { useContext, useEffect } from 'react';
+import React, { useContext, useEffect, useState } from 'react';
 import { 
   View, 
   Text, 
   TouchableOpacity, 
   StyleSheet, 
-  Dimensions,
   Animated,
   Image,
-  ScrollView
+  ScrollView,
+  ActivityIndicator
 } from 'react-native';
 import { AuthContext } from "../contexts/AuthContext";
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
+import { db } from '../config/firebase';
+import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
 
 const HomeScreen = ({ navigation }) => {
   const { logout, user } = useContext(AuthContext);
   const fadeAnim = new Animated.Value(0);
   const slideAnim = new Animated.Value(0);
+  const [loading, setLoading] = useState(true);
+  const [stats, setStats] = useState({ tickets: 0, passengers: 0 });
+  const [userName, setUserName] = useState('Staff Member');
 
   useEffect(() => {
+    if (!user) {
+      setLoading(false);
+      return;
+    }
+
     Animated.parallel([
       Animated.timing(fadeAnim, {
         toValue: 1,
@@ -32,18 +42,55 @@ const HomeScreen = ({ navigation }) => {
         useNativeDriver: true,
       }),
     ]).start();
-  }, []);
+
+    // Fetch user-specific data
+    const fetchStats = async () => {
+      try {
+        const ticketsQuery = query(collection(db, 'tickets'), where('userId', '==', user.uid));
+        const ticketsSnapshot = await getDocs(ticketsQuery);
+        const ticketsCount = ticketsSnapshot.size;
+
+        const passengersQuery = query(collection(db, 'passengers'), where('userId', '==', user.uid));
+        const passengersSnapshot = await getDocs(passengersQuery);
+        const passengersCount = passengersSnapshot.size;
+
+        setStats({ tickets: ticketsCount, passengers: passengersCount });
+      } catch (error) {
+        console.error("Error fetching stats:", error);
+      }
+    };
+
+    // Fetch user profile data
+    const fetchUserProfile = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.email));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setUserName(userData.firstName + ' ' + userData.lastName);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+
+    const fetchData = async () => {
+      await Promise.all([fetchStats(), fetchUserProfile()]);
+      setLoading(false);
+    };
+
+    fetchData();
+  }, [user]);
 
   const renderQuickStats = () => (
     <View style={styles.statsContainer}>
       <View style={styles.statCard}>
         <MaterialIcons name="receipt-long" size={24} color="#4A90E2" />
-        <Text style={styles.statNumber}>0</Text>
+        <Text style={styles.statNumber}>{stats.tickets}</Text>
         <Text style={styles.statLabel}>Today's Tickets</Text>
       </View>
       <View style={styles.statCard}>
         <MaterialIcons name="people" size={24} color="#4A90E2" />
-        <Text style={styles.statNumber}>0</Text>
+        <Text style={styles.statNumber}>{stats.passengers}</Text>
         <Text style={styles.statLabel}>Passengers</Text>
       </View>
     </View>
@@ -55,13 +102,13 @@ const HomeScreen = ({ navigation }) => {
         colors={['#4A90E2', '#50E3C2']}
         style={styles.headerGradient}
       >
-        <Animated.View style={[styles.headerContent, { opacity: fadeAnim }]}>
+        <Animated.View style={[styles.headerContent]}>
           <Image
-            source={require('../assets/bus-icon.jpg')} // Make sure to add this image
+            source={require('../assets/bus-icon.jpg')} 
             style={styles.headerIcon}
           />
           <Text style={styles.welcomeText}>Welcome back,</Text>
-          <Text style={styles.userName}>{user?.name || 'Staff Member'}</Text>
+          <Text style={styles.userName}>{userName}</Text>
         </Animated.View>
       </LinearGradient>
 
@@ -80,7 +127,11 @@ const HomeScreen = ({ navigation }) => {
           },
         ]}
       >
-        {renderQuickStats()}
+        {loading ? (
+          <ActivityIndicator size="large" color="#4A90E2" />
+        ) : (
+          renderQuickStats()
+        )}
 
         <TouchableOpacity
           style={styles.generateButton}

@@ -1,14 +1,45 @@
-import React from 'react';
-import { View, Text, StyleSheet, Linking, ScrollView,TouchableOpacity } from 'react-native';
+import React, { useContext, useEffect, useState } from 'react';
+import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
+import { AuthContext } from "../contexts/AuthContext";
+import { db } from '../config/firebase';
+import { doc, getDoc } from 'firebase/firestore';
 
 const generateTicketId = () => {
   return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 };
 
+const generateRandomCode = () => {
+  return Math.random().toString(36).substring(2, 10).toUpperCase();
+};
+
 const ReceiptPreview = ({ route }) => {
-  const { formData, user } = route.params || {};
+  const { formData } = route.params || {};
+  const { user } = useContext(AuthContext);
+  const [staffName, setStaffName] = useState('Staff Member');
   const ticketId = generateTicketId();
+  const randomCode = generateRandomCode();
+  const currentDate = new Date();
+  const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+  const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
+
+  useEffect(() => {
+    const fetchUserProfile = async () => {
+      try {
+        const userDoc = await getDoc(doc(db, 'users', user.email));
+        if (userDoc.exists()) {
+          const userData = userDoc.data();
+          setStaffName(userData.firstName + ' ' + userData.lastName);
+        }
+      } catch (error) {
+        console.error("Error fetching user profile:", error);
+      }
+    };
+
+    if (user) {
+      fetchUserProfile();
+    }
+  }, [user]);
 
   if (!formData) {
     return (
@@ -26,52 +57,44 @@ const ReceiptPreview = ({ route }) => {
         </Text>
 
         <View style={styles.section}>
-          {/* <Text style={styles.heading}>The Phone Numbers</Text> */}
-          {/* <Text style={styles.texthead}>{formData.phoneNumber}</Text> */}
           <Text style={styles.texthead}>+256 751206424 | + 256 782099992</Text>
           <Text style={styles.texthead}>1st Floor Solar House</Text>
           <Text style={styles.texthead}>Plot 63 Muteesa I Road Katwe</Text>
           <Text style={styles.headingbig}>Ishaka</Text>
           <Text style={styles.divider}></Text>
-
         </View>
 
         <View style={styles.section}>
-
-          {/* <Text style={styles.heading}>The Building</Text> */}
-          <Text style={styles.text}>Client Name : {formData.clientName}</Text>
+          <Text style={styles.text}>Client Name: {formData.clientName}</Text>
           <Text style={styles.text}>Ticket ID: {ticketId}</Text>
-          <Text style={styles.text}>Phone No. : {formData.phoneNumber}</Text>
+          <Text style={styles.text}>Phone No.: {formData.phoneNumber}</Text>
           <Text style={styles.text}>From: {formData.from?.name}</Text>
           <Text style={styles.text}>To: {formData.to?.name}</Text>
           <Text style={styles.text}>Status: {formData.paymentStatus?.name}</Text>
-          <Text style={styles.text}>Printed by: user</Text>
-          <Text style={styles.text}>Travel Date : {new Date().getDay()}-{new Date().getMonth()}-{new Date().getFullYear()}</Text>
+          <Text style={styles.text}>Printed by: {staffName}</Text>
+          <Text style={styles.text}>Printed on: {formattedDate} at {formattedTime}</Text>
+          <Text style={styles.text}>Travel Date: {formattedDate}</Text>
         </View>
 
         <View style={styles.section}>
-        <Text style={styles.divider}></Text>
-        <Text style={styles.heading2}>Code: RandomCode</Text>
-        <Text style={styles.heading2}>Paid: UGX {formData.amountPaid}</Text>
-        <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
-         <Text style={styles.divider}></Text>
-         <Text style={styles.texthead}>www.link.co.ug/terms-of-service.php</Text>
-         
+          <Text style={styles.divider}></Text>
+          <Text style={styles.heading2}>Code: {randomCode}</Text>
+          <Text style={styles.heading2}>Paid: UGX {formData.amountPaid}</Text>
+          <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
+          <Text style={styles.divider}></Text>
+          <Text style={styles.texthead}>www.link.co.ug/terms-of-service.php</Text>
         </View>
-
-       
 
         <View style={styles.divider} />
         <Text style={styles.texthead}>Thank you for travelling with us</Text>
-        
- 
+
         <View style={styles.qrContainer}>
           <QRCode value={`TICKET:${ticketId}`} size={128} />
         </View>
       </View>
-       <TouchableOpacity style={styles.submitButton} >
-                <Text style={styles.submitButtonText}>Print Receipt</Text>
-     </TouchableOpacity>
+      <TouchableOpacity style={styles.submitButton}>
+        <Text style={styles.submitButtonText}>Print Receipt</Text>
+      </TouchableOpacity>
     </ScrollView>
   );
 };
@@ -103,7 +126,7 @@ const styles = StyleSheet.create({
     fontSize: 29,
     fontWeight: '600',
     marginBottom: 8,
-    textAlign:'center',
+    textAlign: 'center',
   },
   heading: {
     fontSize: 18,
@@ -128,7 +151,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     color: '#4b5563',
     marginBottom: 10,
-    paddingBottom:10,
+    paddingBottom: 10,
   },
   subheading: {
     fontSize: 16,
@@ -160,12 +183,12 @@ const styles = StyleSheet.create({
     margin: 15,
     padding: 15,
     borderRadius: 8,
-    alignItems: 'center'
+    alignItems: 'center',
   },
   submitButtonText: {
     color: '#fff',
     fontSize: 16,
-    fontWeight: '600'
+    fontWeight: '600',
   },
 });
 

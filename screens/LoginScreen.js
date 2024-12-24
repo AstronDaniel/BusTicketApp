@@ -40,8 +40,7 @@ const LoginScreen = ({ navigation }) => {
       if (state.isConnected) {
         // Online login
         try {
-          const user = await loginUser(email, password);
-          login(user); // Set the user context
+          await login(email, password);
           setLoading(false);
         } catch (error) {
           console.error("Login User Error:", error);

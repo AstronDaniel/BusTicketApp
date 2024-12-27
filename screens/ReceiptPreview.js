@@ -1,9 +1,12 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity, Platform, PermissionsAndroid } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { AuthContext } from "../contexts/AuthContext";
 import { db } from '../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import { printReceipt } from './PrintReceipt';
+// import RNBluetoothClassic from 'react-native-bluetooth-classic';
+import { BleManager } from 'react-native-ble-plx';
 
 const generateTicketId = () => {
   return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -12,6 +15,23 @@ const generateTicketId = () => {
 const generateRandomCode = () => {
   return Math.random().toString(36).substring(2, 10).toUpperCase();
 };
+
+const requestPermissions = async () => {
+  if (Platform.OS === 'android') {
+    const granted = await PermissionsAndroid.requestMultiple([
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+      PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT,
+      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+    ]);
+    return (
+      granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN] === PermissionsAndroid.RESULTS.GRANTED &&
+      granted[PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT] === PermissionsAndroid.RESULTS.GRANTED &&
+      granted[PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION] === PermissionsAndroid.RESULTS.GRANTED
+    );
+  }
+  return true;
+};
+
 
 const ReceiptPreview = ({ route }) => {
   const { formData } = route.params || {};
@@ -22,6 +42,15 @@ const ReceiptPreview = ({ route }) => {
   const currentDate = new Date();
   const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
   const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
+  const [discoveredDevices, setDiscoveredDevices] = useState([]);
+  const [selectedPrinter, setSelectedPrinter] = useState(null);
+  const [isBluetoothReady, setIsBluetoothReady] = useState(false);
+  const [manager] = useState(() => new BleManager({
+    restoreStateIdentifier: 'BusTicketAppBleManager',
+    restoreStateFunction: restoredState => {
+      console.log('BLE Manager restored state:', restoredState);
+    }
+  }));
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -41,6 +70,98 @@ const ReceiptPreview = ({ route }) => {
     }
   }, [user]);
 
+  useEffect(() => {
+    const setupBluetooth = async () => {
+      try {
+        const hasPermission = await requestPermissions();
+        if (hasPermission) {
+          manager.onStateChange((state) => {
+            if (state === 'PoweredOn') {
+              setIsBluetoothReady(true);
+            }
+          }, true);
+        }
+      } catch (error) {
+        console.error('Bluetooth setup error:', error);
+      }
+    };
+    
+    setupBluetooth();
+    return () => {
+      manager.destroy();
+    };
+  }, []);
+
+  useEffect(() => {
+    const subscription = manager.onStateChange((state) => {
+      console.log('BLE state:', state);
+      if (state === 'PoweredOn') {
+        setIsBluetoothReady(true);
+      }
+    }, true);
+
+    return () => {
+      subscription.remove();
+      manager.destroy();
+    };
+  }, [manager]);
+
+  const handleDiscoverPrinters = async () => {
+    if (!isBluetoothReady) {
+      console.log('Bluetooth is not ready');
+      return;
+    }
+    try {
+      setDiscoveredDevices([]); // Clear previous results
+      manager.startDeviceScan(null, null, (error, device) => {
+        if (error) {
+          console.error('Scan error:', error);
+          return;
+        }
+        if (device) {
+          setDiscoveredDevices(prev => {
+            if (!prev.find(d => d.id === device.id)) {
+              return [...prev, device];
+            }
+            return prev;
+          });
+        }
+      });
+
+      setTimeout(() => {
+        manager.stopDeviceScan();
+      }, 5000);
+    } catch (error) {
+      console.error('Discovery error:', error);
+    }
+  };
+
+  const handleSelectPrinter = (device) => {
+    setSelectedPrinter(device.id);
+  };
+
+  const handlePrintReceipt = async () => {
+    const receiptData = {
+      printerAddress: selectedPrinter || "YourPrinterAddress",
+      clientName: formData.clientName,
+      ticketId,
+      phoneNumber: formData.phoneNumber,
+      from: formData.from?.name,
+      to: formData.to?.name,
+      paymentStatus: formData.paymentStatus?.name,
+      staffName,
+      printedDate: formattedDate + ' at ' + formattedTime,
+      travelDate: formattedDate,
+      randomCode,
+      amountPaid: formData.amountPaid,
+    };
+    try {
+      await printReceipt(receiptData);
+    } catch (error) {
+      console.error("Print error:", error);
+    }
+  };
+
   if (!formData) {
     return (
       <View style={styles.container}>
@@ -53,14 +174,14 @@ const ReceiptPreview = ({ route }) => {
     <ScrollView style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title} onPress={() => Linking.openURL('#')}>
-          LINK BUS TICKET
+        RUKUNDO EGUMERO TRANSPORTERS
         </Text>
 
         <View style={styles.section}>
-          <Text style={styles.texthead}>+256 751206424 | + 256 782099992</Text>
-          <Text style={styles.texthead}>1st Floor Solar House</Text>
-          <Text style={styles.texthead}>Plot 63 Muteesa I Road Katwe</Text>
-          <Text style={styles.headingbig}>Ishaka</Text>
+          <Text style={styles.texthead}>+256 762076555 | + 256 772169814</Text>
+          <Text style={styles.texthead}>Kagadi Taxi Park</Text>
+          <Text style={styles.texthead}>Plot 63 Kagadi park</Text>
+          <Text style={styles.headingbig}>{formData.from?.name}</Text>
           <Text style={styles.divider}></Text>
         </View>
 
@@ -92,7 +213,15 @@ const ReceiptPreview = ({ route }) => {
           <QRCode value={`TICKET:${ticketId}`} size={128} />
         </View>
       </View>
-      <TouchableOpacity style={styles.submitButton}>
+      <TouchableOpacity style={styles.submitButton} onPress={handleDiscoverPrinters}>
+        <Text style={styles.submitButtonText}>Discover Printers</Text>
+      </TouchableOpacity>
+      {discoveredDevices.map((device) => (
+        <TouchableOpacity key={device.id} onPress={() => handleSelectPrinter(device)}>
+          <Text>{device.name || device.id}</Text>
+        </TouchableOpacity>
+      ))}
+      <TouchableOpacity style={styles.submitButton} onPress={handlePrintReceipt}>
         <Text style={styles.submitButtonText}>Print Receipt</Text>
       </TouchableOpacity>
     </ScrollView>

@@ -16,7 +16,7 @@ if (!firebase.apps.length) {
     firebase.initializeApp(firebaseConfig);
     const db = firebase.firestore();
     // Set Firestore settings
-    db.settings({ ignoreUndefinedProperties: true });
+    db.settings({ ignoreUndefinedProperties: true});
     db.enablePersistence()
       .catch((err) => {
         if (err.code === 'failed-precondition') {

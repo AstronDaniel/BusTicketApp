@@ -89,7 +89,7 @@ android {
     namespace 'com.link.receiptGenerator'
     defaultConfig {
         applicationId 'com.link.receiptGenerator'
-        minSdkVersion 23  // Required for BLE
+        minSdkVersion rootProject.ext.minSdkVersion
         targetSdkVersion rootProject.ext.targetSdkVersion
         versionCode 1
         versionName "1.0.0"
@@ -173,6 +173,4 @@ dependencies {
     } else {
         implementation jscFlavor
     }
-
-    implementation "com.polidea.rxandroidble2:rxandroidble:1.12.1"
 }

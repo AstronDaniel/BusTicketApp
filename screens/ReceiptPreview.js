@@ -53,14 +53,14 @@ const ReceiptPreview = ({ route }) => {
     <ScrollView style={styles.container}>
       <View style={styles.card}>
         <Text style={styles.title} onPress={() => Linking.openURL('#')}>
-          LINK BUS TICKET
+        RUKUNDO EGUMEHO TRANSPORTERS
         </Text>
 
         <View style={styles.section}>
-          <Text style={styles.texthead}>+256 751206424 | + 256 782099992</Text>
-          <Text style={styles.texthead}>1st Floor Solar House</Text>
-          <Text style={styles.texthead}>Plot 63 Muteesa I Road Katwe</Text>
-          <Text style={styles.headingbig}>Ishaka</Text>
+          <Text style={styles.texthead}>+256 762076555 | +256 772169814</Text>
+          <Text style={styles.texthead}>Kagafi Taxi Park</Text>
+          <Text style={styles.texthead}>Plot 63 Kagadi</Text>
+          <Text style={styles.headingbig}>{formData.from?.name}</Text>
           <Text style={styles.divider}></Text>
         </View>
 

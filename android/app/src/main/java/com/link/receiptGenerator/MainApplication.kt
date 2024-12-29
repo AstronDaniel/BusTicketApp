@@ -1,5 +1,5 @@
 package com.link.receiptGenerator
-
+import cn.jystudio.bluetooth.RNBluetoothEscposPrinterPackage;
 import android.app.Application
 import android.content.res.Configuration
 

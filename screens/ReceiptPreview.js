@@ -7,6 +7,7 @@ import { doc, getDoc } from 'firebase/firestore';
 import PrintService from '../services/PrintService';
 import { BluetoothManager } from 'react-native-bluetooth-escpos-printer';
 import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import BluetoothDeviceSelector from '../components/BluetoothDeviceSelector';
 
 const generateTicketId = () => {
   return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -25,6 +26,7 @@ const ReceiptPreview = ({ route }) => {
   const currentDate = new Date();
   const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
   const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
+  const [showDeviceSelector, setShowDeviceSelector] = useState(false);
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -118,11 +120,20 @@ const ReceiptPreview = ({ route }) => {
         return;
       }
 
-      // Rest of printing logic
-      console.log('Connecting to printer...');
-      const printer = await PrintService.connectPrinter();
-      console.log('Printer connected:', printer);
+      // Show device selector
+      setShowDeviceSelector(true);
+    } catch (error) {
+      console.error('Print error:', error);
+      Alert.alert('Error', error.message);
+    }
+  };
 
+  const handleDeviceSelected = async (device) => {
+    setShowDeviceSelector(false);
+    try {
+      // Connect to selected printer
+      await PrintService.connectPrinter(device);
+      
       // Prepare receipt data
       const receiptData = {
         ...formData,
@@ -149,52 +160,60 @@ const ReceiptPreview = ({ route }) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title} onPress={() => Linking.openURL('#')}>
-        RUKUNDO EGUMEHO TRANSPORTERS
-        </Text>
+    <>
+      <ScrollView style={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.title} onPress={() => Linking.openURL('#')}>
+          RUKUNDO EGUMEHO TRANSPORTERS
+          </Text>
 
-        <View style={styles.section}>
-          <Text style={styles.texthead}>+256 762076555 | +256 772169814</Text>
-          <Text style={styles.texthead}>Kagadi Taxi Park</Text>
-          <Text style={styles.texthead}>Plot 63 Kagadi</Text>
-          <Text style={styles.headingbig}>{formData.from?.name}</Text>
-          <Text style={styles.divider}></Text>
+          <View style={styles.section}>
+            <Text style={styles.texthead}>+256 762076555 | +256 772169814</Text>
+            <Text style={styles.texthead}>Kagadi Taxi Park</Text>
+            <Text style={styles.texthead}>Plot 63 Kagadi</Text>
+            <Text style={styles.headingbig}>{formData.from?.name}</Text>
+            <Text style={styles.divider}></Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.text}>Client Name: {formData.clientName}</Text>
+            <Text style={styles.text}>Ticket ID: {ticketId}</Text>
+            <Text style={styles.text}>Phone No.: {formData.phoneNumber}</Text>
+            <Text style={styles.text}>From: {formData.from?.name}</Text>
+            <Text style={styles.text}>To: {formData.to?.name}</Text>
+            <Text style={styles.text}>Status: {formData.paymentStatus?.name}</Text>
+            <Text style={styles.text}>Printed by: {staffName}</Text>
+            <Text style={styles.text}>Printed on: {formattedDate} at {formattedTime}</Text>
+            <Text style={styles.text}>Travel Date: {formattedDate}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.divider}></Text>
+            <Text style={styles.heading2}>Code: {randomCode}</Text>
+            <Text style={styles.heading2}>Paid: UGX {formData.amountPaid}</Text>
+            <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
+            <Text style={styles.divider}></Text>
+            <Text style={styles.texthead}>www.link.co.ug/terms-of-service.php</Text>
+          </View>
+
+          <View style={styles.divider} />
+          <Text style={styles.texthead}>Thank you for travelling with us</Text>
+
+          <View style={styles.qrContainer}>
+            <QRCode value={`TICKET:${ticketId}`} size={128} />
+          </View>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.text}>Client Name: {formData.clientName}</Text>
-          <Text style={styles.text}>Ticket ID: {ticketId}</Text>
-          <Text style={styles.text}>Phone No.: {formData.phoneNumber}</Text>
-          <Text style={styles.text}>From: {formData.from?.name}</Text>
-          <Text style={styles.text}>To: {formData.to?.name}</Text>
-          <Text style={styles.text}>Status: {formData.paymentStatus?.name}</Text>
-          <Text style={styles.text}>Printed by: {staffName}</Text>
-          <Text style={styles.text}>Printed on: {formattedDate} at {formattedTime}</Text>
-          <Text style={styles.text}>Travel Date: {formattedDate}</Text>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.divider}></Text>
-          <Text style={styles.heading2}>Code: {randomCode}</Text>
-          <Text style={styles.heading2}>Paid: UGX {formData.amountPaid}</Text>
-          <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
-          <Text style={styles.divider}></Text>
-          <Text style={styles.texthead}>www.link.co.ug/terms-of-service.php</Text>
-        </View>
-
-        <View style={styles.divider} />
-        <Text style={styles.texthead}>Thank you for travelling with us</Text>
-
-        <View style={styles.qrContainer}>
-          <QRCode value={`TICKET:${ticketId}`} size={128} />
-        </View>
-      </View>
-      <TouchableOpacity style={styles.submitButton} onPress={handlePrint}>
-        <Text style={styles.submitButtonText}>Print Receipt</Text>
-      </TouchableOpacity>
-    </ScrollView>
+        <TouchableOpacity style={styles.submitButton} onPress={handlePrint}>
+          <Text style={styles.submitButtonText}>Print Receipt</Text>
+        </TouchableOpacity>
+      </ScrollView>
+      
+      <BluetoothDeviceSelector
+        visible={showDeviceSelector}
+        onClose={() => setShowDeviceSelector(false)}
+        onSelectDevice={handleDeviceSelected}
+      />
+    </>
   );
 };
 

@@ -1,49 +1,19 @@
 import {BluetoothManager, BluetoothEscposPrinter} from 'react-native-bluetooth-escpos-printer';
 
 const PrintService = {
-  connectPrinter: async () => {
+  connectPrinter: async (device) => {
     try {
-      console.log('Scanning for devices...');
+      console.log('Connecting to device:', device);
       
-      // Check currently paired devices
-      const paired = await BluetoothManager.enableBluetooth();
-      console.log('Currently paired devices:', paired);
-      
-      // Start scanning for devices
-      console.log('Starting device scan...');
-      await new Promise((resolve) => setTimeout(resolve, 1000)); // Short delay before scanning
-      
-      const foundDevices = await BluetoothManager.scanDevices();
-      console.log('Found devices:', foundDevices);
-      
-      let devices = [];
-      if (typeof foundDevices === 'object') {
-        devices = Object.values(foundDevices)
-          .filter(device => device.name && device.address)
-          .map(device => ({
-            name: device.name,
-            address: device.address,
-          }));
-      }
-      
-      console.log('Available printers:', devices);
-      
-      if (devices.length === 0) {
-        throw new Error('No Bluetooth printers found');
-      }
- 
-      // Try to connect to the first printer found
-      const firstPrinter = devices[0];
-      console.log('Attempting to connect to:', firstPrinter);
-      
-      const connected = await BluetoothManager.connect(firstPrinter.address);
+      // Connect to the selected device
+      const connected = await BluetoothManager.connect(device.address);
       console.log('Connection result:', connected);
       
       if (!connected) {
         throw new Error('Failed to connect to printer');
       }
 
-      return firstPrinter;
+      return device;
     } catch (error) {
       console.error('Connection error:', error);
       throw new Error(`Failed to connect: ${error.message}`);

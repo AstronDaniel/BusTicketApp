@@ -186,9 +186,11 @@ const styles = StyleSheet.create({
     paddingHorizontal: 20,
   },
   headerIcon: {
-    width: 80,
-    height: 80,
+    width: 400,
+    height: 200,
     marginBottom: 15,
+    top :-50,
+    position:'relative',
   },
   welcomeText: {
     fontSize: 16,

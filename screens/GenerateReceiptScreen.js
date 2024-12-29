@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, FlatList } from 'react-native';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import axios from 'axios';
 
@@ -8,9 +8,10 @@ const GenerateReceiptScreen = ({ navigation }) => {
     clientName: '',
     phoneNumber: '',
     amountPaid: '',
-    from: null,
-    to: null,
-    paymentStatus: null
+    from: '',
+    to: '',
+    paymentStatus: null,
+    temperature: ''
   });
 
   const handleLocationSelect = (type) => {
@@ -50,8 +51,8 @@ const GenerateReceiptScreen = ({ navigation }) => {
   };
 
   const validateForm = () => {
-    const { clientName, phoneNumber, amountPaid, from, to, paymentStatus } = formData;
-    if (!clientName || !phoneNumber || !amountPaid || !from || !to || !paymentStatus) {
+    const { clientName, phoneNumber, amountPaid, from, to, paymentStatus, temperature } = formData;
+    if (!clientName || !phoneNumber || !amountPaid || !from || !to || !paymentStatus || !temperature) {
       Alert.alert('Error', 'All fields are required.');
       return false;
     }
@@ -131,25 +132,20 @@ const GenerateReceiptScreen = ({ navigation }) => {
       key: 'locations',
       content: (
         <View style={styles.inputContainer}>
-          <TouchableOpacity 
-            style={styles.selectionButton}
-            onPress={() => handleLocationSelect('from')}
-          >
-            <Text style={styles.label}>From</Text>
-            <Text style={styles.selectionText}>
-              {formData.from?.name || 'Select location'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.selectionButton}
-            onPress={() => handleLocationSelect('to')}
-          >
-            <Text style={styles.label}>To</Text>
-            <Text style={styles.selectionText}>
-              {formData.to?.name || 'Select location'}
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.label}>From</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.from}
+            onChangeText={value => setFormData(prev => ({ ...prev, from: value }))}
+            placeholder="Enter departure location"
+          />
+          <Text style={styles.label}>To</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.to}
+            onChangeText={value => setFormData(prev => ({ ...prev, to: value }))}
+            placeholder="Enter destination location"
+          />
         </View>
       )
     },
@@ -185,6 +181,27 @@ const GenerateReceiptScreen = ({ navigation }) => {
       )
     },
     {
+      key: 'temperature',
+      content: (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Temperature</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.temperature}
+            onChangeText={value => setFormData(prev => ({ ...prev, temperature: value }))}
+            keyboardType="numeric"
+            placeholder="Enter temperature"
+            textContentType="none"
+            returnKeyType="done"
+            blurOnSubmit={false}
+            onSubmitEditing={Keyboard.dismiss}
+            editable
+            selectTextOnFocus
+          />
+        </View>
+      )
+    },
+    {
       key: 'submit',
       content: (
         <TouchableOpacity style={styles.submitButton} onPress={handlePreview}>
@@ -195,14 +212,20 @@ const GenerateReceiptScreen = ({ navigation }) => {
   ];
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={formFields}
-        renderItem={({ item }) => item.content}
-        keyExtractor={item => item.key}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {formFields.map(field => (
+            <View key={field.key}>
+              {field.content}
+            </View>
+          ))}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };
 

@@ -142,10 +142,10 @@ const LoginScreen = ({ navigation }) => {
               </TouchableOpacity>
             </View>
 
-            <TouchableOpacity style={styles.forgotPassword}>
+           {/** <TouchableOpacity style={styles.forgotPassword}>
               <Text style={styles.forgotPasswordText}>Forgot Password?</Text>
             </TouchableOpacity>
-
+**/}
             <TouchableOpacity 
               style={styles.loginButton}
               onPress={handleLogin}
@@ -163,7 +163,7 @@ const LoginScreen = ({ navigation }) => {
                 )}
               </LinearGradient>
             </TouchableOpacity>
-
+{/** 
             <View style={styles.divider}>
               <View style={styles.dividerLine} />
               <Text style={styles.dividerText}>OR</Text>
@@ -188,6 +188,7 @@ const LoginScreen = ({ navigation }) => {
                 <Text style={styles.footerLink}>Privacy Policy</Text>
               </TouchableOpacity>
             </View>
+**/}
           </Animatable.View>
         </ScrollView>
       </KeyboardAvoidingView>

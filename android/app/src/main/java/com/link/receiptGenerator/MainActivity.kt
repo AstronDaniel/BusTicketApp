@@ -2,21 +2,25 @@ package com.link.receiptGenerator
 
 import android.os.Build
 import android.os.Bundle
-
 import com.facebook.react.ReactActivity
 import com.facebook.react.ReactActivityDelegate
 import com.facebook.react.defaults.DefaultNewArchitectureEntryPoint.fabricEnabled
 import com.facebook.react.defaults.DefaultReactActivityDelegate
-
 import expo.modules.ReactActivityDelegateWrapper
+import com.facebook.react.ReactRootView
+import android.content.res.Configuration
 
 class MainActivity : ReactActivity() {
   override fun onCreate(savedInstanceState: Bundle?) {
     // Set the theme to AppTheme BEFORE onCreate to support
     // coloring the background, status bar, and navigation bar.
     // This is required for expo-splash-screen.
-    setTheme(R.style.AppTheme);
+    setTheme(R.style.AppTheme)
     super.onCreate(null)
+    // Enable react-native-screens
+    ReactRootView(this).apply { 
+        setIsFabric(fabricEnabled)
+    }
   }
 
   /**

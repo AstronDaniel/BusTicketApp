@@ -1,10 +1,13 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity, Alert } from 'react-native';
+import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { AuthContext } from "../contexts/AuthContext";
 import { db } from '../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-import PrintService from '../services/PrintService'; 
+import PrintService from '../services/PrintService';
+import { BluetoothManager } from 'react-native-bluetooth-escpos-printer';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+
 const generateTicketId = () => {
   return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 };
@@ -41,11 +44,71 @@ const ReceiptPreview = ({ route }) => {
     }
   }, [user]);
 
+  const requestPermissions = async () => {
+    try {
+      const permissions = Platform.select({
+        android: [
+          PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+          PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
+          PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+        ]
+      });
+
+      const results = await Promise.all(
+        permissions.map(async (permission) => {
+          const result = await check(permission);
+          
+          if (result === RESULTS.DENIED) {
+            return await request(permission);
+          }
+          
+          return result;
+        })
+      );
+
+      // Check if all permissions are granted
+      const allGranted = results.every(
+        result => result === RESULTS.GRANTED
+      );
+
+      console.log('Permission results:', results);
+      return allGranted;
+    } catch (err) {
+      console.warn('Permission error:', err);
+      return false;
+    }
+  };
+
   const handlePrint = async () => {
     try {
-      // Connect to printer
-      await PrintService.connectPrinter();
+      console.log('Starting print process...');
       
+      // Check permissions first
+      const hasPermissions = await requestPermissions();
+      console.log('Permissions granted:', hasPermissions);
+      
+      if (!hasPermissions) {
+        Alert.alert(
+          'Permission Denied', 
+          'Bluetooth and location permissions are required to print receipts'
+        );
+        return;
+      }
+
+      // Check if Bluetooth is enabled
+      const isEnabled = await BluetoothManager.isBluetoothEnabled();
+      console.log('Bluetooth enabled:', isEnabled);
+      
+      if (!isEnabled) {
+        Alert.alert('Bluetooth Required', 'Please enable Bluetooth to print receipts');
+        return;
+      }
+
+      // Connect to printer
+      console.log('Connecting to printer...');
+      const printer = await PrintService.connectPrinter();
+      console.log('Printer connected:', printer);
+
       // Prepare receipt data
       const receiptData = {
         ...formData,
@@ -54,9 +117,11 @@ const ReceiptPreview = ({ route }) => {
       };
       
       // Print receipt
+      console.log('Printing receipt...');
       await PrintService.printReceipt(receiptData);
       Alert.alert('Success', 'Receipt printed successfully!');
     } catch (error) {
+      console.error('Print error:', error);
       Alert.alert('Error', error.message);
     }
   };

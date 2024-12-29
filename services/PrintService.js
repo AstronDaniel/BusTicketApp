@@ -1,12 +1,12 @@
 import {BluetoothManager,BluetoothEscposPrinter,BluetoothTscPrinter} from 'react-native-bluetooth-escpos-printer';
 
 BluetoothManager.isBluetoothEnabled().then((enabled)=> {
-    console.log(enabled) // enabled ==> true /false
+    console.log(enabled,"Blietooth enabled") // enabled ==> true /false
 }, (err)=> {
     console.log(err)
 });
 
-export const PrintService = {
+const PrintService = {
   connectPrinter: async () => {
     try {
       const devices = await BluetoothEscposPrinter.scanDevices();
@@ -60,3 +60,5 @@ export const PrintService = {
     }
   }
 };
+
+export default PrintService;

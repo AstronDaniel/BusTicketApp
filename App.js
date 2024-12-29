@@ -3,7 +3,10 @@ import { AuthProvider } from "./contexts/AuthContext";
 import AppNavigator from "./navigation/AppNavigator";
 import { Provider as PaperProvider, DefaultTheme } from "react-native-paper";
 import { StatusBar } from 'react-native';
+import { enableScreens } from 'react-native-screens';
 import './config/firebase'; // Ensure Firebase is initialized
+
+enableScreens();
 
 const theme = {
   ...DefaultTheme,

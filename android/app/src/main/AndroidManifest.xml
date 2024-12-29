@@ -6,21 +6,22 @@
   <uses-permission android:name="android.permission.VIBRATE"/>
   <uses-permission android:name="android.permission.WRITE_EXTERNAL_STORAGE"/>
   
-  <!-- Add these Bluetooth permissions -->
+  <!-- Legacy Bluetooth permissions (API 30 and below) -->
   <uses-permission android:name="android.permission.BLUETOOTH" android:maxSdkVersion="30" />
   <uses-permission android:name="android.permission.BLUETOOTH_ADMIN" android:maxSdkVersion="30" />
-  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" />
-  <uses-permission android:name="android.permission.BLUETOOTH_SCAN" 
-      android:usesPermissionFlags="neverForLocation" />
-  <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" />
-
-  <!-- For Android 12+ location permissions may be required for Bluetooth scanning -->
-  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" />
-  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" />
+  
+  <!-- New Bluetooth permissions (API 31 and above) -->
+  <uses-permission android:name="android.permission.BLUETOOTH_SCAN" android:usesPermissionFlags="neverForLocation" tools:targetApi="s" />
+  <uses-permission android:name="android.permission.BLUETOOTH_CONNECT" tools:targetApi="s" />
+  <uses-permission android:name="android.permission.BLUETOOTH_ADVERTISE" tools:targetApi="s" />
+  
+  <!-- Location permissions -->
+  <uses-permission android:name="android.permission.ACCESS_COARSE_LOCATION" android:maxSdkVersion="30" />
+  <uses-permission android:name="android.permission.ACCESS_FINE_LOCATION" android:maxSdkVersion="30" />
 
   <!-- Feature declaration for Bluetooth -->
   <uses-feature android:name="android.hardware.bluetooth" android:required="true" />
-  <uses-feature android:name="android.hardware.bluetooth_le" android:required="true" />
+  <uses-feature android:name="android.hardware.bluetooth_le" android:required="false" />
 
   <queries>
     <intent>

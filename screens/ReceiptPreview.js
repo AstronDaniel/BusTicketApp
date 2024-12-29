@@ -46,65 +46,79 @@ const ReceiptPreview = ({ route }) => {
 
   const requestPermissions = async () => {
     try {
-      const permissions = Platform.select({
-        android: [
-          PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
-          PERMISSIONS.ANDROID.BLUETOOTH_SCAN,
-          PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
-        ]
-      });
+      let permissionsToRequest = [];
+      
+      if (Platform.OS === 'android') {
+        if (Platform.Version >= 31) { // Android 12 or higher
+          permissionsToRequest = [
+            PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+            PERMISSIONS.ANDROID.BLUETOOTH_SCAN
+          ];
+        } else { // Android 11 or lower
+          // Note: For Android 11 and below, we only need location permissions
+          // as they implicitly grant Bluetooth scanning permissions
+          permissionsToRequest = [
+            PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+            PERMISSIONS.ANDROID.ACCESS_COARSE_LOCATION
+          ];
+        }
+      }
 
+      console.log('Requesting permissions:', permissionsToRequest);
+
+      // First check Bluetooth status
+      const isEnabled = await BluetoothManager.isBluetoothEnabled();
+      console.log('Bluetooth enabled:', isEnabled);
+      
+      if (!isEnabled) {
+        Alert.alert('Bluetooth Required', 'Please enable Bluetooth to print receipts');
+        return false;
+      }
+
+      // Then check permissions
       const results = await Promise.all(
-        permissions.map(async (permission) => {
+        permissionsToRequest.map(async (permission) => {
           const result = await check(permission);
+          console.log(`Permission ${permission} initial status:`, result);
           
           if (result === RESULTS.DENIED) {
-            return await request(permission);
+            const requestResult = await request(permission);
+            console.log(`Permission ${permission} request result:`, requestResult);
+            return requestResult;
           }
           
           return result;
         })
       );
 
-      // Check if all permissions are granted
+      console.log('Permission results:', results);
+      
+      // For Android 11 and below, if location permissions are granted,
+      // we can assume Bluetooth permissions are also granted
       const allGranted = results.every(
         result => result === RESULTS.GRANTED
       );
 
-      console.log('Permission results:', results);
       return allGranted;
     } catch (err) {
-      console.warn('Permission error:', err);
+      console.error('Permission error:', err);
       return false;
     }
   };
 
   const handlePrint = async () => {
     try {
-      console.log('Starting print process...');
-      
-      // Check permissions first
+      // Check permissions
       const hasPermissions = await requestPermissions();
-      console.log('Permissions granted:', hasPermissions);
-      
       if (!hasPermissions) {
         Alert.alert(
           'Permission Denied', 
-          'Bluetooth and location permissions are required to print receipts'
+          'Please grant the required permissions in your device settings to print receipts'
         );
         return;
       }
 
-      // Check if Bluetooth is enabled
-      const isEnabled = await BluetoothManager.isBluetoothEnabled();
-      console.log('Bluetooth enabled:', isEnabled);
-      
-      if (!isEnabled) {
-        Alert.alert('Bluetooth Required', 'Please enable Bluetooth to print receipts');
-        return;
-      }
-
-      // Connect to printer
+      // Rest of printing logic
       console.log('Connecting to printer...');
       const printer = await PrintService.connectPrinter();
       console.log('Printer connected:', printer);
@@ -143,7 +157,7 @@ const ReceiptPreview = ({ route }) => {
 
         <View style={styles.section}>
           <Text style={styles.texthead}>+256 762076555 | +256 772169814</Text>
-          <Text style={styles.texthead}>Kagafi Taxi Park</Text>
+          <Text style={styles.texthead}>Kagadi Taxi Park</Text>
           <Text style={styles.texthead}>Plot 63 Kagadi</Text>
           <Text style={styles.headingbig}>{formData.from?.name}</Text>
           <Text style={styles.divider}></Text>

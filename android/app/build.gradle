@@ -149,7 +149,10 @@ android {
 dependencies {
     // The version of react-native is set by the React Native Gradle Plugin
     implementation("com.facebook.react:react-android")
+
+    // Add bluetooth printer dependencies
     implementation project(':react-native-bluetooth-escpos-printer')
+    implementation 'com.google.zxing:core:3.5.2'
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";

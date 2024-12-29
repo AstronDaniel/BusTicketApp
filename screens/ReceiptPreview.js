@@ -1,10 +1,10 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity, Alert } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { AuthContext } from "../contexts/AuthContext";
 import { db } from '../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
-
+import PrintService from '../services/PrintService'; 
 const generateTicketId = () => {
   return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
 };
@@ -40,6 +40,26 @@ const ReceiptPreview = ({ route }) => {
       fetchUserProfile();
     }
   }, [user]);
+
+  const handlePrint = async () => {
+    try {
+      // Connect to printer
+      await PrintService.connectPrinter();
+      
+      // Prepare receipt data
+      const receiptData = {
+        ...formData,
+        ticketId,
+        date: `${formattedDate} ${formattedTime}`
+      };
+      
+      // Print receipt
+      await PrintService.printReceipt(receiptData);
+      Alert.alert('Success', 'Receipt printed successfully!');
+    } catch (error) {
+      Alert.alert('Error', error.message);
+    }
+  };
 
   if (!formData) {
     return (
@@ -92,7 +112,7 @@ const ReceiptPreview = ({ route }) => {
           <QRCode value={`TICKET:${ticketId}`} size={128} />
         </View>
       </View>
-      <TouchableOpacity style={styles.submitButton}>
+      <TouchableOpacity style={styles.submitButton} onPress={handlePrint}>
         <Text style={styles.submitButtonText}>Print Receipt</Text>
       </TouchableOpacity>
     </ScrollView>

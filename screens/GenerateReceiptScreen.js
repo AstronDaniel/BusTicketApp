@@ -1,17 +1,28 @@
-import React, { useState } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, FlatList } from 'react-native';
+import React, { useState, useContext } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import axios from 'axios';
+import { db } from '../config/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { AuthContext } from "../contexts/AuthContext";
 
 const GenerateReceiptScreen = ({ navigation }) => {
+  const { user } = useContext(AuthContext);
+  // console.log("user:",user.email)
   const [formData, setFormData] = useState({
     clientName: '',
     phoneNumber: '',
     amountPaid: '',
-    from: null,
-    to: null,
-    paymentStatus: null
+    from: '',
+    to: '',
+    paymentStatus: null,
+    temperature: '',
+    printedBy: '' // Added field
   });
+
+  const generateTicketId = () => {
+    return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
 
   const handleLocationSelect = (type) => {
     navigation.navigate('LocationSelection', {
@@ -43,15 +54,37 @@ const GenerateReceiptScreen = ({ navigation }) => {
     });
   };
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
     if (validateForm()) {
-      navigation.navigate('ReceiptPreview', { formData });
+      const ticketId = generateTicketId();
+      const currentDate = new Date();
+      const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+      const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
+     
+      const updatedFormData = {
+        ...formData,
+        printedBy: formData.printedBy || user.email || 'Default Staff Member', // Default value if empty
+        userId: user.uid, // Include userId
+        email: user.email, // Include email
+        ticketId,
+        date: `${formattedDate} ${formattedTime}`
+      };
+
+      try {
+        // Save to Firestore
+        await addDoc(collection(db, 'tickets'), updatedFormData);
+        navigation.navigate('ReceiptPreview', { formData: updatedFormData });
+        console.log("data saved :", { formData: updatedFormData });
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save receipt data.');
+        console.error('Error saving receipt data:', error);
+      }
     }
   };
 
   const validateForm = () => {
-    const { clientName, phoneNumber, amountPaid, from, to, paymentStatus } = formData;
-    if (!clientName || !phoneNumber || !amountPaid || !from || !to || !paymentStatus) {
+    const { clientName, phoneNumber, amountPaid, from, to, paymentStatus, temperature } = formData;
+    if (!clientName || !phoneNumber || !amountPaid || !from || !to || !paymentStatus || !temperature) {
       Alert.alert('Error', 'All fields are required.');
       return false;
     }
@@ -131,25 +164,20 @@ const GenerateReceiptScreen = ({ navigation }) => {
       key: 'locations',
       content: (
         <View style={styles.inputContainer}>
-          <TouchableOpacity 
-            style={styles.selectionButton}
-            onPress={() => handleLocationSelect('from')}
-          >
-            <Text style={styles.label}>From</Text>
-            <Text style={styles.selectionText}>
-              {formData.from?.name || 'Select location'}
-            </Text>
-          </TouchableOpacity>
-
-          <TouchableOpacity 
-            style={styles.selectionButton}
-            onPress={() => handleLocationSelect('to')}
-          >
-            <Text style={styles.label}>To</Text>
-            <Text style={styles.selectionText}>
-              {formData.to?.name || 'Select location'}
-            </Text>
-          </TouchableOpacity>
+          <Text style={styles.label}>From</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.from}
+            onChangeText={value => setFormData(prev => ({ ...prev, from: value }))}
+            placeholder="Enter departure location"
+          />
+          <Text style={styles.label}>To</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.to}
+            onChangeText={value => setFormData(prev => ({ ...prev, to: value }))}
+            placeholder="Enter destination location"
+          />
         </View>
       )
     },
@@ -185,6 +213,41 @@ const GenerateReceiptScreen = ({ navigation }) => {
       )
     },
     {
+      key: 'temperature',
+      content: (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Temperature</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.temperature}
+            onChangeText={value => setFormData(prev => ({ ...prev, temperature: value }))}
+            keyboardType="numeric"
+            placeholder="Enter temperature"
+            textContentType="none"
+            returnKeyType="done"
+            blurOnSubmit={false}
+            onSubmitEditing={Keyboard.dismiss}
+            editable
+            selectTextOnFocus
+          />
+        </View>
+      )
+    },
+    {
+      key: 'printedBy', // Added field
+      content: (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Printed By</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.printedBy}
+            onChangeText={value => setFormData(prev => ({ ...prev, printedBy: value }))}
+            placeholder="Enter staff member name"
+          />
+        </View>
+      )
+    },
+    {
       key: 'submit',
       content: (
         <TouchableOpacity style={styles.submitButton} onPress={handlePreview}>
@@ -195,14 +258,20 @@ const GenerateReceiptScreen = ({ navigation }) => {
   ];
 
   return (
-    <View style={styles.container}>
-      <FlatList
-        data={formFields}
-        renderItem={({ item }) => item.content}
-        keyExtractor={item => item.key}
-        showsVerticalScrollIndicator={false}
-      />
-    </View>
+    <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
+      <KeyboardAvoidingView
+        style={styles.container}
+        behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
+      >
+        <ScrollView showsVerticalScrollIndicator={false}>
+          {formFields.map(field => (
+            <View key={field.key}>
+              {field.content}
+            </View>
+          ))}
+        </ScrollView>
+      </KeyboardAvoidingView>
+    </TouchableWithoutFeedback>
   );
 };
 

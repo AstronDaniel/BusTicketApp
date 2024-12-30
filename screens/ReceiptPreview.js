@@ -1,9 +1,16 @@
 import React, { useContext, useEffect, useState } from 'react';
-import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity } from 'react-native';
+import { View, Text, StyleSheet, Linking, ScrollView, TouchableOpacity, Alert, Platform } from 'react-native';
 import QRCode from 'react-native-qrcode-svg';
 import { AuthContext } from "../contexts/AuthContext";
 import { db } from '../config/firebase';
 import { doc, getDoc } from 'firebase/firestore';
+import PrintService from '../services/PrintService';
+import { BluetoothManager } from 'react-native-bluetooth-escpos-printer';
+import { check, request, PERMISSIONS, RESULTS } from 'react-native-permissions';
+import BluetoothDeviceSelector from '../components/BluetoothDeviceSelector';
+import { FontAwesome } from '@expo/vector-icons';
+import * as Print from 'expo-print';
+import * as Sharing from 'expo-sharing';
 
 const generateTicketId = () => {
   return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
@@ -17,6 +24,9 @@ const ReceiptPreview = ({ route }) => {
   const { formData } = route.params || {};
   const { user } = useContext(AuthContext);
   const [staffName, setStaffName] = useState('Staff Member');
+  const [showDeviceSelector, setShowDeviceSelector] = useState(false);
+  const [qrRef, setQrRef] = useState(null);
+  
   const ticketId = generateTicketId();
   const randomCode = generateRandomCode();
   const currentDate = new Date();
@@ -41,6 +51,244 @@ const ReceiptPreview = ({ route }) => {
     }
   }, [user]);
 
+  const requestPermissions = async () => {
+    try {
+      let permissionsToRequest = [];
+      
+      if (Platform.OS === 'android') {
+        if (Platform.Version >= 31) {
+          permissionsToRequest = [
+            PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
+            PERMISSIONS.ANDROID.BLUETOOTH_SCAN
+          ];
+        } else {
+          permissionsToRequest = [
+            PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
+            PERMISSIONS.ANDROID.ACCESS_COARSE_LOCATION
+          ];
+        }
+      }
+
+      const isEnabled = await BluetoothManager.isBluetoothEnabled();
+      
+      if (!isEnabled) {
+        Alert.alert('Bluetooth Required', 'Please enable Bluetooth to print receipts');
+        return false;
+      }
+
+      const results = await Promise.all(
+        permissionsToRequest.map(async (permission) => {
+          const result = await check(permission);
+          
+          if (result === RESULTS.DENIED) {
+            const requestResult = await request(permission);
+            return requestResult;
+          }
+          
+          return result;
+        })
+      );
+      
+      const allGranted = results.every(
+        result => result === RESULTS.GRANTED
+      );
+
+      return allGranted;
+    } catch (err) {
+      console.error('Permission error:', err);
+      return false;
+    }
+  };
+
+  const getQRCodeBase64 = async () => {
+    return new Promise((resolve, reject) => {
+      if (qrRef) {
+        qrRef.toDataURL((data) => {
+          resolve(data);
+        });
+      } else {
+        reject(new Error('QR Code reference not available'));
+      }
+    });
+  };
+
+  const handlePrint = async () => {
+    try {
+      const hasPermissions = await requestPermissions();
+      if (!hasPermissions) {
+        Alert.alert(
+          'Permission Denied', 
+          'Please grant the required permissions in your device settings to print receipts'
+        );
+        return;
+      }
+
+      setShowDeviceSelector(true);
+    } catch (error) {
+      console.error('Print error:', error);
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const handleDeviceSelected = async (device) => {
+    setShowDeviceSelector(false);
+    try {
+      await PrintService.connectPrinter(device);
+      
+      const receiptData = {
+        ...formData,
+        ticketId,
+        date: `${formattedDate} ${formattedTime}`
+      };
+      
+      await PrintService.printReceipt(receiptData);
+      Alert.alert('Success', 'Receipt printed successfully!');
+    } catch (error) {
+      console.error('Print error:', error);
+      Alert.alert('Error', error.message);
+    }
+  };
+
+  const handleExportPDF = async () => {
+    try {
+      let qrBase64;
+      try {
+        qrBase64 = await getQRCodeBase64();
+      } catch (error) {
+        console.error('QR Code generation error:', error);
+        qrBase64 = '';
+      }
+
+      const htmlContent = `
+        <!DOCTYPE html>
+        <html>
+        <head>
+          <meta charset="utf-8">
+          <style>
+            body {
+              font-family: system-ui, -apple-system, sans-serif;
+              margin: 0;
+              padding: 20px;
+              max-width: 400px;
+              margin: 0 auto;
+            }
+            .container {
+              background: white;
+              padding: 20px;
+              border-radius: 8px;
+              box-shadow:0 2px 5px #eee;
+            }
+            .title {
+              font-size: 30px;
+              font-weight: bold;
+              color: #2563eb;
+              text-align: center;
+              margin-bottom: 16px;
+            }
+            .header-info {
+              text-align: center;
+              color: #4b5563;
+              font-size: 16px;
+              margin-bottom: 4px;
+            }
+            .location {
+              font-size: 29px;
+              font-weight: 600;
+              text-align: center;
+              margin: 16px 0;
+            }
+            .divider {
+              border-top: 1px solid #e5e7eb;
+              margin: 16px 0;
+            }
+            .info-row {
+              font-size: 16px;
+              color: #4b5563;
+              margin-bottom: 10px;
+              padding-bottom: 10px;
+            }
+            .code {
+              font-size: 20px;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .amount {
+              font-size: 20px;
+              font-weight: bold;
+              margin-bottom: 8px;
+            }
+            .footer {
+              text-align: center;
+              color: #4b5563;
+              font-size: 16px;
+              margin-top: 16px;
+            }
+            .qr-container {
+              text-align: center;
+              margin-top: 20px;
+            }
+            .qr-code {
+              width: 128px;
+              height: 128px;
+            }
+          </style>
+        </head>
+        <body>
+          <div class="container">
+            <div class="title">RUKUNDO EGUMEHO TRANSPORTERS</div>
+            
+            <div class="header-info">+256 762076555 | +256 772169814</div>
+            <div class="header-info">Kagadi Taxi Park</div>
+            <div class="header-info">Plot 63 Kagadi</div>
+            
+            <div class="location">${formData.from}</div>
+            
+            <div class="divider"></div>
+            
+            <div class="info-row">Client Name: ${formData.clientName}</div>
+            <div class="info-row">Ticket ID: ${ticketId}</div>
+            <div class="info-row">Phone No.: ${formData.phoneNumber}</div>
+            <div class="info-row">From: ${formData.from}</div>
+            <div class="info-row">To: ${formData.to}</div>
+            <div class="info-row">Status: ${formData.paymentStatus?.name}</div>
+            <div class="info-row">Temperature: ${formData.temperature}</div>
+            <div class="info-row">Printed by: ${formData.printedBy || staffName}</div>
+            <div class="info-row">Printed on: ${formattedDate} at ${formattedTime}</div>
+            <div class="info-row">Travel Date: ${formattedDate}</div>
+            
+            <div class="divider"></div>
+            
+            <div class="code">Code: ${randomCode}</div>
+            <div class="amount">Paid: UGX ${formData.amountPaid}</div>
+            
+            <div class="header-info">Visit link below to review Terms and Conditions</div>
+            <div class="header-info">www.link.co.ug/terms-of-service.php</div>
+            
+             <div class="divid"></div>
+            
+            <div class="footer">Thank you for travelling with us</div>
+            
+            ${qrBase64 ? `
+              <div class="qr-container">
+                <img src="data:image/png;base64,${qrBase64}" class="qr-code" />
+              </div>
+            ` : ''}
+          </div>
+        </body>
+        </html>
+      `;
+
+      const { uri } = await Print.printToFileAsync({
+        html: htmlContent,
+        base64: false,
+      });
+      await Sharing.shareAsync(uri);
+    } catch (error) {
+      console.error('Export PDF error:', error);
+      Alert.alert('Error', 'Failed to export receipt to PDF');
+    }
+  };
+
   if (!formData) {
     return (
       <View style={styles.container}>
@@ -50,52 +298,72 @@ const ReceiptPreview = ({ route }) => {
   }
 
   return (
-    <ScrollView style={styles.container}>
-      <View style={styles.card}>
-        <Text style={styles.title} onPress={() => Linking.openURL('#')}>
-          LINK BUS TICKET
-        </Text>
+    <>
+      <ScrollView style={styles.container}>
+        <View style={styles.card}>
+          <Text style={styles.title} onPress={() => Linking.openURL('#')}>
+            RUKUNDO EGUMEHO TRANSPORTERS
+          </Text>
 
-        <View style={styles.section}>
-          <Text style={styles.texthead}>+256 751206424 | + 256 782099992</Text>
-          <Text style={styles.texthead}>1st Floor Solar House</Text>
-          <Text style={styles.texthead}>Plot 63 Muteesa I Road Katwe</Text>
-          <Text style={styles.headingbig}>Ishaka</Text>
-          <Text style={styles.divider}></Text>
+          <View style={styles.section}>
+            <Text style={styles.texthead}>+256 762076555 | +256 772169814</Text>
+            <Text style={styles.texthead}>Kagadi Taxi Park</Text>
+            <Text style={styles.texthead}>Plot 63 Kagadi</Text>
+            <Text style={styles.headingbig}>{formData.from}</Text>
+            <Text style={styles.divider}></Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.text}>Client Name: {formData.clientName}</Text>
+            <Text style={styles.text}>Ticket ID: {ticketId}</Text>
+            <Text style={styles.text}>Phone No.: {formData.phoneNumber}</Text>
+            <Text style={styles.text}>From: {formData.from}</Text>
+            <Text style={styles.text}>To: {formData.to}</Text>
+            <Text style={styles.text}>Status: {formData.paymentStatus?.name}</Text>
+            <Text style={styles.text}>Temperature: {formData.temperature}</Text>
+            <Text style={styles.text}>Printed by: {formData.printedBy || staffName}</Text>
+            <Text style={styles.text}>Printed on: {formattedDate} at {formattedTime}</Text>
+            <Text style={styles.text}>Travel Date: {formattedDate}</Text>
+          </View>
+
+          <View style={styles.section}>
+            <Text style={styles.divider}></Text>
+            <Text style={styles.heading2}>Code: {randomCode}</Text>
+            <Text style={styles.heading2}>Paid: UGX {formData.amountPaid}</Text>
+            <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
+            <Text style={styles.divider}></Text>
+            <Text style={styles.texthead}>www.egumero.co.ug/terms-of-service.php</Text>
+          </View>
+
+          <View style={styles.divider} />
+          <Text style={styles.texthead}>Thank you for travelling with us</Text>
+
+          <View style={styles.qrContainer}>
+            <QRCode
+              value={`TICKET:${ticketId}`}
+              size={128}
+              getRef={(ref) => setQrRef(ref)}
+            />
+          </View>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.text}>Client Name: {formData.clientName}</Text>
-          <Text style={styles.text}>Ticket ID: {ticketId}</Text>
-          <Text style={styles.text}>Phone No.: {formData.phoneNumber}</Text>
-          <Text style={styles.text}>From: {formData.from?.name}</Text>
-          <Text style={styles.text}>To: {formData.to?.name}</Text>
-          <Text style={styles.text}>Status: {formData.paymentStatus?.name}</Text>
-          <Text style={styles.text}>Printed by: {staffName}</Text>
-          <Text style={styles.text}>Printed on: {formattedDate} at {formattedTime}</Text>
-          <Text style={styles.text}>Travel Date: {formattedDate}</Text>
+        <View style={styles.buttonContainer}>
+          <TouchableOpacity style={styles.printButton} onPress={handlePrint}>
+            <FontAwesome name="print" size={24} color="#fff" />
+            <Text style={styles.printButtonText}>Print Receipt</Text>
+          </TouchableOpacity>
+          <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF}>
+            <FontAwesome name="file-pdf-o" size={24} color="#fff" />
+            <Text style={styles.exportButtonText}>Export to PDF</Text>
+          </TouchableOpacity>
         </View>
-
-        <View style={styles.section}>
-          <Text style={styles.divider}></Text>
-          <Text style={styles.heading2}>Code: {randomCode}</Text>
-          <Text style={styles.heading2}>Paid: UGX {formData.amountPaid}</Text>
-          <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
-          <Text style={styles.divider}></Text>
-          <Text style={styles.texthead}>www.link.co.ug/terms-of-service.php</Text>
-        </View>
-
-        <View style={styles.divider} />
-        <Text style={styles.texthead}>Thank you for travelling with us</Text>
-
-        <View style={styles.qrContainer}>
-          <QRCode value={`TICKET:${ticketId}`} size={128} />
-        </View>
-      </View>
-      <TouchableOpacity style={styles.submitButton}>
-        <Text style={styles.submitButtonText}>Print Receipt</Text>
-      </TouchableOpacity>
-    </ScrollView>
+      </ScrollView>
+      
+      <BluetoothDeviceSelector
+        visible={showDeviceSelector}
+        onClose={() => setShowDeviceSelector(false)}
+        onSelectDevice={handleDeviceSelected}
+      />
+    </>
   );
 };
 
@@ -177,6 +445,42 @@ const styles = StyleSheet.create({
     color: 'red',
     textAlign: 'center',
     marginTop: 20,
+  },
+  buttonContainer: {
+    flexDirection: 'row',
+    justifyContent: 'center',
+    marginVertical: 20,
+  },
+  printButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    marginHorizontal: 10,
+  },
+  printButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
+  },
+  exportButton: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    backgroundColor: '#007AFF',
+    padding: 15,
+    borderRadius: 8,
+    marginHorizontal: 10,
+  },
+  exportButtonText: {
+    color: '#fff',
+    fontSize: 16,
+    fontWeight: '600',
+    marginLeft: 10,
+  },
+  iconButton: {
+    marginHorizontal: 10,
   },
   submitButton: {
     backgroundColor: '#007AFF',

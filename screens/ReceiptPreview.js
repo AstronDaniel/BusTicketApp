@@ -251,7 +251,8 @@ const ReceiptPreview = ({ route }) => {
             <div class="info-row">From: ${formData.from}</div>
             <div class="info-row">To: ${formData.to}</div>
             <div class="info-row">Status: ${formData.paymentStatus?.name}</div>
-            <div class="info-row">Printed by: ${staffName}</div>
+            <div class="info-row">Temperature: ${formData.temperature}</div>
+            <div class="info-row">Printed by: ${formData.printedBy || staffName}</div>
             <div class="info-row">Printed on: ${formattedDate} at ${formattedTime}</div>
             <div class="info-row">Travel Date: ${formattedDate}</div>
             
@@ -319,7 +320,8 @@ const ReceiptPreview = ({ route }) => {
             <Text style={styles.text}>From: {formData.from}</Text>
             <Text style={styles.text}>To: {formData.to}</Text>
             <Text style={styles.text}>Status: {formData.paymentStatus?.name}</Text>
-            <Text style={styles.text}>Printed by: {staffName}</Text>
+            <Text style={styles.text}>Temperature: {formData.temperature}</Text>
+            <Text style={styles.text}>Printed by: {formData.printedBy || staffName}</Text>
             <Text style={styles.text}>Printed on: {formattedDate} at {formattedTime}</Text>
             <Text style={styles.text}>Travel Date: {formattedDate}</Text>
           </View>

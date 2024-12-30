@@ -7,7 +7,8 @@ import {
   Animated,
   Image,
   ScrollView,
-  ActivityIndicator
+  ActivityIndicator,
+  Alert
 } from 'react-native';
 import { AuthContext } from "../contexts/AuthContext";
 import { LinearGradient } from 'expo-linear-gradient';
@@ -81,6 +82,14 @@ const HomeScreen = ({ navigation }) => {
     fetchData();
   }, [user]);
 
+  const handleHistoryPress = () => {
+    if (user?.email === 'astrondaniel6@gmail.com') {
+      navigation.navigate('History');
+    } else {
+      console.log('Access Denied', 'You do not have permission to access this screen.');
+    }
+  };
+
   const renderQuickStats = () => (
     <View style={styles.statsContainer}>
       <View style={styles.statCard}>
@@ -147,7 +156,7 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton}>
+          <TouchableOpacity style={styles.actionButton} onPress={handleHistoryPress}>
             <FontAwesome5 name="history" size={20} color="#4A90E2" />
             <Text style={styles.actionButtonText}>History</Text>
           </TouchableOpacity>

@@ -36,6 +36,7 @@
     "react-native-dropdown-picker": "^5.4.6",
     "react-native-gesture-handler": "~2.20.2",
     "react-native-keyboard-aware-scroll-view": "^0.9.5",
+    "react-native-linear-gradient": "^2.8.3",
     "react-native-mask-text": "^0.14.2",
     "react-native-paper": "^5.12.5",
     "react-native-permissions": "^4.1.5",

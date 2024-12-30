@@ -1,9 +1,14 @@
-import React, { useState } from 'react';
+import React, { useState, useContext } from 'react';
 import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import axios from 'axios';
+import { db } from '../config/firebase';
+import { collection, addDoc } from 'firebase/firestore';
+import { AuthContext } from "../contexts/AuthContext";
 
 const GenerateReceiptScreen = ({ navigation }) => {
+  const { user } = useContext(AuthContext);
+  // console.log("user:",user.email)
   const [formData, setFormData] = useState({
     clientName: '',
     phoneNumber: '',
@@ -11,8 +16,13 @@ const GenerateReceiptScreen = ({ navigation }) => {
     from: '',
     to: '',
     paymentStatus: null,
-    temperature: ''
+    temperature: '',
+    printedBy: '' // Added field
   });
+
+  const generateTicketId = () => {
+    return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
+  };
 
   const handleLocationSelect = (type) => {
     navigation.navigate('LocationSelection', {
@@ -44,9 +54,31 @@ const GenerateReceiptScreen = ({ navigation }) => {
     });
   };
 
-  const handlePreview = () => {
+  const handlePreview = async () => {
     if (validateForm()) {
-      navigation.navigate('ReceiptPreview', { formData });
+      const ticketId = generateTicketId();
+      const currentDate = new Date();
+      const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+      const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
+     
+      const updatedFormData = {
+        ...formData,
+        printedBy: formData.printedBy || user.email || 'Default Staff Member', // Default value if empty
+        userId: user.uid, // Include userId
+        email: user.email, // Include email
+        ticketId,
+        date: `${formattedDate} ${formattedTime}`
+      };
+
+      try {
+        // Save to Firestore
+        await addDoc(collection(db, 'tickets'), updatedFormData);
+        navigation.navigate('ReceiptPreview', { formData: updatedFormData });
+        console.log("data saved :", { formData: updatedFormData });
+      } catch (error) {
+        Alert.alert('Error', 'Failed to save receipt data.');
+        console.error('Error saving receipt data:', error);
+      }
     }
   };
 
@@ -197,6 +229,20 @@ const GenerateReceiptScreen = ({ navigation }) => {
             onSubmitEditing={Keyboard.dismiss}
             editable
             selectTextOnFocus
+          />
+        </View>
+      )
+    },
+    {
+      key: 'printedBy', // Added field
+      content: (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Printed By</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.printedBy}
+            onChangeText={value => setFormData(prev => ({ ...prev, printedBy: value }))}
+            placeholder="Enter staff member name"
           />
         </View>
       )

@@ -1,4 +1,4 @@
-import {BluetoothManager, BluetoothEscposPrinter} from 'react-native-bluetooth-escpos-printer';
+import { BluetoothManager, BluetoothEscposPrinter } from 'react-native-bluetooth-escpos-printer';
 
 const PrintService = {
   connectPrinter: async (device) => {
@@ -37,21 +37,27 @@ const PrintService = {
       
       // Print Contact Info
       await BluetoothEscposPrinter.printText("+256 762076555 | +256 772169814\n", {});
-      await BluetoothEscposPrinter.printText("Kagafi Taxi Park\n", {});
+      await BluetoothEscposPrinter.printText("Kagadi Taxi Park\n", {});
       await BluetoothEscposPrinter.printText("Plot 63 Kagadi\n\n", {});
       
       // Print Receipt Details
       console.log('Printing details...');
       await BluetoothEscposPrinter.printText("--------------------------------\n", {});
       await BluetoothEscposPrinter.printerAlign(BluetoothEscposPrinter.ALIGN.LEFT);
-      await BluetoothEscposPrinter.printText(`Client: ${receiptData.clientName}\n`, {});
+      await BluetoothEscposPrinter.printText(`Client Name: ${receiptData.clientName}\n`, {});
       await BluetoothEscposPrinter.printText(`Ticket ID: ${receiptData.ticketId}\n`, {});
-      await BluetoothEscposPrinter.printText(`Phone: ${receiptData.phoneNumber}\n`, {});
-      await BluetoothEscposPrinter.printText(`From: ${receiptData.from?.name}\n`, {});
-      await BluetoothEscposPrinter.printText(`To: ${receiptData.to?.name}\n`, {});
-      await BluetoothEscposPrinter.printText(`Amount: UGX ${receiptData.amountPaid}\n`, {});
+      await BluetoothEscposPrinter.printText(`Phone No.: ${receiptData.phoneNumber}\n`, {});
+      await BluetoothEscposPrinter.printText(`From: ${receiptData.from}\n`, {});
+      await BluetoothEscposPrinter.printText(`To: ${receiptData.to}\n`, {});
       await BluetoothEscposPrinter.printText(`Status: ${receiptData.paymentStatus?.name}\n`, {});
-      await BluetoothEscposPrinter.printText(`Date: ${receiptData.date}\n`, {});
+      await BluetoothEscposPrinter.printText(`Temperature: ${receiptData.temperature}\n`, {});
+      await BluetoothEscposPrinter.printText(`Printed by: ${receiptData.printedBy}\n`, {});
+      await BluetoothEscposPrinter.printText(`Printed on: ${receiptData.date}\n`, {});
+      await BluetoothEscposPrinter.printText(`Travel Date: ${receiptData.date}\n`, {});
+      
+      // Print QR Code
+      console.log('Printing QR code...');
+      await BluetoothEscposPrinter.printQRCode(`TICKET:${receiptData.ticketId}`, 200, BluetoothEscposPrinter.ERROR_CORRECTION.L);
       
       // Print Footer
       console.log('Printing footer...');

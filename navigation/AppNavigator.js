@@ -12,6 +12,7 @@ import ReceiptPreview from "../screens/ReceiptPreview";
 import GenerateReceiptScreen from "../screens/GenerateReceiptScreen";
 import LocationSelectionScreen from "../screens/LocationSelectionScreen"; // Ensure this import is correct
 import HistoryScreen from "../screens/HistoryScreen";
+import ReportScreen from "../screens/ReportScreen";
 const Stack = createStackNavigator();
 
 export default function AppNavigator() {
@@ -31,6 +32,10 @@ export default function AppNavigator() {
             <Stack.Screen
             name="History" component={HistoryScreen}
             options={{title:"History"}}
+            />
+            <Stack.Screen
+            name="Report" component={ReportScreen}
+            options={{title:"Report"}}
             />
 
             <Stack.Screen

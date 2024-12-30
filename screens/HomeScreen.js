@@ -15,6 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { db } from '../config/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
+import ReportService from '../services/ReportService';
 
 const HomeScreen = ({ navigation }) => {
   const { logout, user } = useContext(AuthContext);
@@ -80,6 +81,9 @@ const HomeScreen = ({ navigation }) => {
     };
 
     fetchData();
+
+    // Automatically generate and store a report
+    ReportService.generateAndStoreReport();
   }, [user]);
 
   const handleHistoryPress = () => {
@@ -156,15 +160,17 @@ const HomeScreen = ({ navigation }) => {
         </TouchableOpacity>
 
         <View style={styles.quickActions}>
-          <TouchableOpacity style={styles.actionButton} onPress={handleHistoryPress}>
-            <FontAwesome5 name="history" size={20} color="#4A90E2" />
-            <Text style={styles.actionButtonText}>History</Text>
-          </TouchableOpacity>
+          {user?.email === 'astrondaniel6@gmail.com' && (
+            <TouchableOpacity style={styles.actionButton} onPress={handleHistoryPress}>
+              <FontAwesome5 name="history" size={20} color="#4A90E2" />
+              <Text style={styles.actionButtonText}>History</Text>
+            </TouchableOpacity>
           
-          <TouchableOpacity style={styles.actionButton}>
+          )}{user?.email === 'astrondaniel6@gmail.com' && (
+          <TouchableOpacity style={styles.actionButton} onPress={() => navigation.navigate('Report')}>
             <MaterialIcons name="analytics" size={20} color="#4A90E2" />
             <Text style={styles.actionButtonText}>Reports</Text>
-          </TouchableOpacity>
+          </TouchableOpacity>)}
 
           <TouchableOpacity 
             style={[styles.actionButton, styles.logoutButton]}

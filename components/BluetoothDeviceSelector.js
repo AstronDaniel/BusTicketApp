@@ -18,37 +18,37 @@ const isPrinterDevice = (deviceName = '') => {
   const name = deviceName?.toLowerCase() || '';
   return PRINTER_KEYWORDS.some(keyword => name.includes(keyword));
 };
-
 const requestBluetoothPermissions = async () => {
   if (Platform.OS !== 'android') return true;
 
   try {
-    // First check if permissions are already granted
-    const fineLocation = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION
-    );
-    const coarseLocation = await PermissionsAndroid.check(
-      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION
+    let permissions = [];
+
+    // For Android 12+ (API level 31+), we only need Bluetooth permissions
+    if (Platform.Version >= 31) {
+      permissions = [
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
+        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
+      ];
+    } else {
+      // For Android 11 and below, we need location permissions
+      permissions = [
+        PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+        PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION
+      ];
+    }
+
+    // Check if permissions are already granted
+    const alreadyGranted = await Promise.all(
+      permissions.map(permission => PermissionsAndroid.check(permission))
     );
 
-    if (fineLocation && coarseLocation) {
+    if (alreadyGranted.every(Boolean)) {
       console.log('Permissions already granted');
       return true;
     }
 
-    const permissions = [
-      PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
-      PermissionsAndroid.PERMISSIONS.ACCESS_COARSE_LOCATION,
-    ];
-
-    // Only add these permissions for Android 12+ (API level 31+)
-    if (Platform.Version >= 31) {
-      permissions.push(
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_SCAN,
-        PermissionsAndroid.PERMISSIONS.BLUETOOTH_CONNECT
-      );
-    }
-
+    // Request permissions
     const results = await PermissionsAndroid.requestMultiple(permissions);
     
     console.log('Permission results:', results);

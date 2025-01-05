@@ -44,16 +44,20 @@ const LoginScreen = ({ navigation }) => {
           setLoading(false);
         } catch (error) {
           console.error("Login User Error:", error);
-          Alert.alert("Login Failed", error.message);
+          Alert.alert("Login Failed", "Please connect to internet to login.");
           setLoading(false);
         }
       } else {
+       
         // Offline login using local data
         try {
           const localData = await AsyncStorage.getItem('userData');
+        
           if (localData) {
             const localUserData = JSON.parse(localData);
-            if (localUserData.email === email && localUserData.password === password) {
+            if (localUserData.email === email && localUserData.password === password) {  
+             
+              
               login(localUserData); // Set the user context with local data
               setLoading(false);
             } else {

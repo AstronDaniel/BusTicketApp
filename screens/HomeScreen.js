@@ -48,7 +48,7 @@ const HomeScreen = ({ navigation }) => {
     // Fetch user-specific data
     const fetchStats = async () => {
       try {
-        const ticketsQuery = query(collection(db, 'tickets'), where('userId', '==', user.uid));
+        const ticketsQuery = query(collection(db, 'tickets'));
         const ticketsSnapshot = await getDocs(ticketsQuery);
         const ticketsCount = ticketsSnapshot.size;
 

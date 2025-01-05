@@ -20,6 +20,7 @@ const GenerateReceiptScreen = ({ navigation }) => {
     printedBy: '' // Added field
   });
 
+  
   const generateTicketId = () => {
     return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
   };
@@ -53,6 +54,13 @@ const GenerateReceiptScreen = ({ navigation }) => {
       }
     });
   };
+  const generateRandomCode = () => {
+    return Math.floor(100000 + Math.random() * 900000).toString();
+  };
+  
+  const randomCode = generateRandomCode();
+
+  const randomTicketId = generateTicketId();
 
   const handlePreview = async () => {
     if (validateForm()) {
@@ -67,7 +75,9 @@ const GenerateReceiptScreen = ({ navigation }) => {
         userId: user.uid, // Include userId
         email: user.email, // Include email
         ticketId,
-        date: `${formattedDate} ${formattedTime}`
+        date: `${formattedDate} ${formattedTime}`,
+        code:`${randomCode}`,
+        ticketId:`${randomTicketId}`,
       };
 
       try {

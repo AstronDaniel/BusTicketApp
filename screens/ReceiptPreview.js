@@ -12,13 +12,8 @@ import { FontAwesome } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
-const generateTicketId = () => {
-  return 'TKT' + Math.random().toString(36).substring(2, 8).toUpperCase();
-};
 
-const generateRandomCode = () => {
-  return Math.floor(100000 + Math.random() * 900000).toString();
-};
+
 
 const formatAmount = (amount) => {
   return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -31,10 +26,10 @@ const ReceiptPreview = ({ route }) => {
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
   const [qrRef, setQrRef] = useState(null);
   
-  const ticketId = generateTicketId();
-  const randomCode = generateRandomCode();
+
+ 
   const currentDate = new Date();
-  const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+  const formattedDate = `${currentDate.getFullYear()}-${currentDate.getMonth().toString()+ 1}-${currentDate.getDate()}`;
   const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
 
   useEffect(() => {
@@ -65,7 +60,7 @@ const ReceiptPreview = ({ route }) => {
             PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
             PERMISSIONS.ANDROID.BLUETOOTH_SCAN
           ];
-        } else {
+        } else { 
           permissionsToRequest = [
             PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
             PERMISSIONS.ANDROID.ACCESS_COARSE_LOCATION
@@ -141,9 +136,9 @@ const ReceiptPreview = ({ route }) => {
       
       const receiptData = {
         ...formData,
-        ticketId,
         date: `${formattedDate} ${formattedTime}`,
-        amountPaid: formatAmount(formData.amountPaid)
+        amountPaid: formatAmount(formData.amountPaid),
+       
       };
       
       await PrintService.printReceipt(receiptData);
@@ -251,7 +246,7 @@ const ReceiptPreview = ({ route }) => {
             <div class="divider"></div>
             
             <div class="info-row">Client Name: ${formData.clientName}</div>
-            <div class="info-row">Ticket ID: ${ticketId}</div>
+            <div class="info-row">Ticket ID: ${formData.ticketId}</div>
             <div class="info-row">Phone No.: ${formData.phoneNumber}</div>
             <div class="info-row">From: ${formData.from}</div>
             <div class="info-row">To: ${formData.to}</div>
@@ -263,7 +258,7 @@ const ReceiptPreview = ({ route }) => {
             
             <div class="divider"></div>
             
-            <div class="code">Code: ${randomCode}</div>
+            <div class="code">Code: ${formData.code}h</div>
             <div class="amount">Paid: UGX ${formatAmount(formData.amountPaid)}</div>
             
             <div class="header-info">Visit link below to review Terms and Conditions</div>
@@ -317,7 +312,7 @@ const ReceiptPreview = ({ route }) => {
             <Text style={styles.headingbig}>{formData.from}</Text>
             <Text style={styles.divider}></Text>
           </View>
-
+ 
           <View style={styles.section}>
             <View style={styles.row}>
               <Text style={styles.label}>Client Name</Text>
@@ -325,7 +320,7 @@ const ReceiptPreview = ({ route }) => {
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Ticket ID</Text>
-              <Text style={styles.value}>:  {ticketId}</Text>
+              <Text style={styles.value}>:  {formData.ticketId}</Text>
             </View>
             <View style={styles.row}>
               <Text style={styles.label}>Phone No.</Text>
@@ -363,7 +358,7 @@ const ReceiptPreview = ({ route }) => {
 
           <View style={styles.section}>
             <Text style={styles.divider}></Text>
-            <Text style={styles.heading2}>Code: {randomCode}</Text>
+            <Text style={styles.heading2}>Code: {formData.code}</Text>
             <Text style={styles.heading2}>Paid: UGX {formatAmount(formData.amountPaid)}</Text>
             <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
             <Text style={styles.divider}></Text>
@@ -375,11 +370,11 @@ const ReceiptPreview = ({ route }) => {
 
           <View style={styles.qrContainer}>
             <QRCode
-              value={`TICKET:${ticketId}`}
+              value={`TICKET:${formData.ticketId}`}
               size={128}
               getRef={(ref) => setQrRef(ref)}
             />
-          </View>
+          </View> 
         </View>
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.printButton} onPress={handlePrint}>

@@ -17,13 +17,14 @@ const GenerateReceiptScreen = ({ navigation }) => {
     to: '',
     paymentStatus: null,
     temperature: '',
-    printedBy: '' // Added field
+    printedBy: '', // Added field
+    numberPlate: '', // Added field
+    numberPlatePrefix: '', // Added field
+    numberPlatePostfix: '', // Added field
   });
 
   
-  const generateTicketId = () => {
-    return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-  };
+ 
 
   const handleLocationSelect = (type) => {
     navigation.navigate('LocationSelection', {
@@ -60,10 +61,17 @@ const GenerateReceiptScreen = ({ navigation }) => {
   
   const randomCode = generateRandomCode();
 
-  const randomTicketId = generateTicketId();
+ 
 
   const handlePreview = async () => {
     if (validateForm()) {
+      const numberPlatePrefix = formData.numberPlate.substring(0, 3);
+      const numberPlatePostfix = formData.numberPlate.substring(3, 10);
+      
+      const generateTicketId = () => {
+        return `${numberPlatePrefix.toUpperCase()}` + Math.random().toString(36).substring(2, 8).toUpperCase();
+      };
+       const randomTicketId = generateTicketId();
       const ticketId = generateTicketId();
       const currentDate = new Date();
       const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
@@ -78,6 +86,8 @@ const GenerateReceiptScreen = ({ navigation }) => {
         date: `${formattedDate} ${formattedTime}`,
         code:`${randomCode}`,
         ticketId:`${randomTicketId}`,
+        numberPlatePrefix, // Added field
+        numberPlatePostfix, // Added field
       };
 
       try {
@@ -253,6 +263,20 @@ const GenerateReceiptScreen = ({ navigation }) => {
             value={formData.printedBy}
             onChangeText={value => setFormData(prev => ({ ...prev, printedBy: value }))}
             placeholder="Enter staff member name"
+          />
+        </View>
+      )
+    },
+    {
+      key: 'numberPlate', // Added field
+      content: (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Bus Number Plate</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.numberPlate}
+            onChangeText={value => setFormData(prev => ({ ...prev, numberPlate: value }))}
+            placeholder="Enter bus number plate"
           />
         </View>
       )

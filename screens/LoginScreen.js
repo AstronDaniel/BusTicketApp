@@ -43,8 +43,12 @@ const LoginScreen = ({ navigation }) => {
           await login(email, password);
           setLoading(false);
         } catch (error) {
-          console.error("Login User Error:", error);
-          Alert.alert("Login Failed", "Please connect to internet to login.");
+          console.error("Login User Error:", error.message);
+          
+          if (error.message===`Login User Error: [FirebaseError: Firebase: A network AuthError (such as timeout, interrupted connection or unreachable host) has occurred. (auth/network-request-failed).]`) {
+            Alert.alert("Network Issue","Please Connect to network to Login");
+          } 
+          Alert.alert("Login Failed","Invalid email or password");
           setLoading(false);
         }
       } else {

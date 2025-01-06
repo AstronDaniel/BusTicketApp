@@ -2,14 +2,14 @@ import React, { useContext, useEffect, useState } from 'react';
 import { View, Text, StyleSheet, FlatList, ActivityIndicator, Alert } from 'react-native';
 import { AuthContext } from "../contexts/AuthContext";
 import { db } from '../config/firebase';
-import { collection, query, where, getDocs } from 'firebase/firestore';
+import { collection, query, getDocs } from 'firebase/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
 
 const ReportScreen = ({ navigation }) => {
   const { user } = useContext(AuthContext);
   const [reports, setReports] = useState([]);
   const [loading, setLoading] = useState(true);
-
+ 
   useEffect(() => {
     if (user?.email !== 'astrondaniel6@gmail.com') {
       console.log('Access Denied', 'You do not have permission to access this screen.');
@@ -19,7 +19,7 @@ const ReportScreen = ({ navigation }) => {
 
     const fetchReports = async () => {
       try {
-        const reportsQuery = query(collection(db, 'reports'));
+        const reportsQuery = query(collection(db, 'tickets'));
         const reportsSnapshot = await getDocs(reportsQuery);
         if (reportsSnapshot.empty) {
           Alert.alert('No Reports', 'No reports available.');
@@ -41,6 +41,34 @@ const ReportScreen = ({ navigation }) => {
 
     fetchReports();
   }, [user, navigation]);
+
+  const calculateAnalytics = (reports) => {
+    const totalReports = reports.length;
+    const totalAmount = reports.reduce((sum, report) => sum + parseFloat(report.amountPaid), 0);
+    const averageAmount = (totalAmount / totalReports).toFixed(2);
+    const locations = reports.reduce((acc, report) => {
+      acc[report.from] = (acc[report.from] || 0) + 1;
+      acc[report.to] = (acc[report.to] || 0) + 1;
+      return acc;
+    }, {});
+    const paymentMethods = reports.reduce((acc, report) => {
+      acc[report.paymentStatus.name] = (acc[report.paymentStatus.name] || 0) + 1;
+      return acc;
+    }, {});
+    const temperatureReadings = reports.map(report => parseFloat(report.temperature));
+    const averageTemperature = (temperatureReadings.reduce((sum, temp) => sum + temp, 0) / temperatureReadings.length).toFixed(2);
+
+    return {
+      totalReports,
+      totalAmount,
+      averageAmount,
+      locations,
+      paymentMethods,
+      averageTemperature
+    };
+  };
+
+  const analytics = calculateAnalytics(reports);
 
   const renderItem = ({ item }) => (
     <View style={styles.itemContainer}>
@@ -78,7 +106,22 @@ const ReportScreen = ({ navigation }) => {
         </LinearGradient>
       </View>
       
-      {reports.length === 0 ? (
+      <View style={styles.analyticsContainer}>
+        <Text style={styles.analyticsText}>Total Reports: {analytics.totalReports}</Text>
+        <Text style={styles.analyticsText}>Total Amount: ${analytics.totalAmount}</Text>
+        <Text style={styles.analyticsText}>Average Amount: ${analytics.averageAmount}</Text>
+        <Text style={styles.analyticsText}>Average Temperature: {analytics.averageTemperature}°C</Text>
+        <Text style={styles.analyticsText}>Locations:</Text>
+        {Object.entries(analytics.locations).map(([location, count]) => (
+          <Text key={location} style={styles.analyticsText}>{location}: {count}</Text>
+        ))}
+        <Text style={styles.analyticsText}>Payment Methods:</Text>
+        {Object.entries(analytics.paymentMethods).map(([method, count]) => (
+          <Text key={method} style={styles.analyticsText}>{method}: {count}</Text>
+        ))}
+      </View>
+
+      {/* {reports.length === 0 ? (
         <View style={styles.noReportsContainer}>
           <Text style={styles.noReportsText}>No reports available.</Text>
         </View>
@@ -90,7 +133,7 @@ const ReportScreen = ({ navigation }) => {
           contentContainerStyle={styles.listContainer}
           showsVerticalScrollIndicator={false}
         />
-      )}
+      )} */}
     </LinearGradient>
   );
 };
@@ -168,6 +211,27 @@ const styles = StyleSheet.create({
   noReportsText: {
     fontSize: 18,
     color: '#ffffff',
+  },
+  analyticsContainer: {
+    padding: 16,
+    backgroundColor: '#ffffff',
+    borderRadius: 12,
+    margin: 16,
+    shadowColor: '#000',
+    shadowOffset: {
+      width: 0,
+      height: 4,
+    },
+    shadowOpacity: 0.1,
+    shadowRadius: 8,
+    elevation: 5,
+    borderWidth: 1,
+    borderColor: 'rgba(0,0,0,0.05)',
+  },
+  analyticsText: {
+    fontSize: 16,
+    color: '#202124',
+    marginBottom: 8,
   },
 });
 

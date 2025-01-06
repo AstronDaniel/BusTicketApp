@@ -128,7 +128,7 @@ const ReceiptPreview = ({ route }) => {
       Alert.alert('Error', error.message);
     }
   };
-
+ 
   const handleDeviceSelected = async (device) => {
     setShowDeviceSelector(false);
     try {
@@ -235,33 +235,35 @@ const ReceiptPreview = ({ route }) => {
         </head>
         <body>
           <div class="container">
-            <div class="title">RUKUNDO EGUMEHO TRANSPORTERS</div>
+            <div class="title">LINK BUS TICKET</div>
             
-            <div class="header-info">+256 762076555 | +256 772169814</div>
-            <div class="header-info">Kagadi Taxi Park</div>
-            <div class="header-info">Plot 63 Kagadi</div>
+            <div class="header-info">+256 751206424 | +256 782099992</div>
+            <div class="header-info">1st Floor Solar House</div>
+            <div class="header-info">Plot 63 Muuteesa I Road Katwe</div>
             
-            <div class="location">${formData.from}</div>
+            <div class="location">${formData.numberPlatePrefix.toUpperCase()}  ${' '} ${formData.numberPlatePostfix.toUpperCase()}</div>
             
             <div class="divider"></div>
             
             <div class="info-row">Client Name: ${formData.clientName}</div>
             <div class="info-row">Ticket ID: ${formData.ticketId}</div>
             <div class="info-row">Phone No.: ${formData.phoneNumber}</div>
+            <div class="info-row">Temperature: ${formData.temperature}</div>
             <div class="info-row">From: ${formData.from}</div>
             <div class="info-row">To: ${formData.to}</div>
-            <div class="info-row">Status: ${formData.paymentStatus?.name}</div>
-            <div class="info-row">Temperature: ${formData.temperature}</div>
+            <div class="info-row">Payment: ${formData.paymentStatus?.name}</div>
+            
             <div class="info-row">Printed by: ${formData.printedBy || staffName}</div>
-            <div class="info-row">Printed on: ${formattedDate} at ${formattedTime}</div>
+            
             <div class="info-row">Travel Date: ${formattedDate}</div>
             
             <div class="divider"></div>
             
-            <div class="code">Code: ${formData.code}h</div>
+            <div class="code">Code: ${formData.code}</div>
             <div class="amount">Paid: UGX ${formatAmount(formData.amountPaid)}</div>
             
             <div class="header-info">Visit link below to review Terms and Conditions</div>
+            <div class="divider"></div>
             <div class="header-info">www.link.co.ug/terms-of-service.php</div>
             
             <div class="divider"></div>
@@ -302,14 +304,18 @@ const ReceiptPreview = ({ route }) => {
       <ScrollView style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.title} onPress={() => Linking.openURL('#')}>
-            RUKUNDO EGUMEHO TRANSPORTERS
+           LINK BUS TICKET
           </Text>
 
           <View style={styles.section}>
-            <Text style={styles.texthead}>+256 762076555 | +256 772169814</Text>
-            <Text style={styles.texthead}>Kagadi Taxi Park</Text>
-            <Text style={styles.texthead}>Plot 63 Kagadi</Text>
-            <Text style={styles.headingbig}>{formData.from}</Text>
+            <Text style={styles.texthead}>+256 751206424 | +256 782099992</Text>
+            <Text style={styles.texthead}>First Floor Solar House</Text>
+            <Text style={styles.texthead}>Plot 63 Muuteesa I Road</Text>
+            <View style={styles.numberPlate}>
+               <Text style={styles.headingbig}>{formData.numberPlatePrefix.toUpperCase()}</Text>
+               <Text style={styles.headingbig}>{formData.numberPlatePostfix.toUpperCase()}</Text>
+            </View>
+           
             <Text style={styles.divider}></Text>
           </View>
  
@@ -362,7 +368,7 @@ const ReceiptPreview = ({ route }) => {
             <Text style={styles.heading2}>Paid: UGX {formatAmount(formData.amountPaid)}</Text>
             <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
             <Text style={styles.divider}></Text>
-            <Text style={styles.texthead}>www.egumero.co.ug/terms-of-service.php</Text>
+            <Text style={styles.texthead}>www.link.co.ug/terms-of-service.php</Text>
           </View>
 
           <View style={styles.divider} />
@@ -425,6 +431,14 @@ const styles = StyleSheet.create({
     fontWeight: '600',
     marginBottom: 8,
     textAlign: 'center',
+  },
+  numberPlate: {
+   
+    display:'flex',
+    flexDirection:'row',
+    
+    justifyContent:'center',
+    gap:15
   },
   heading: {
     fontSize: 18,

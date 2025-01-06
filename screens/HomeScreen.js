@@ -15,7 +15,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { db } from '../config/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-import ReportService from '../services/ReportService';
+// import ReportService from '../services/ReportService';
 
 const HomeScreen = ({ navigation }) => {
   const { logout, user } = useContext(AuthContext);
@@ -48,7 +48,7 @@ const HomeScreen = ({ navigation }) => {
     // Fetch user-specific data
     const fetchStats = async () => {
       try {
-        const ticketsQuery = query(collection(db, 'tickets'), where('userId', '==', user.uid));
+        const ticketsQuery = query(collection(db, 'tickets'));
         const ticketsSnapshot = await getDocs(ticketsQuery);
         const ticketsCount = ticketsSnapshot.size;
 
@@ -83,7 +83,7 @@ const HomeScreen = ({ navigation }) => {
     fetchData();
 
     // Automatically generate and store a report
-    ReportService.generateAndStoreReport();
+    // ReportService.generateAndStoreReport();
   }, [user]);
 
   const handleHistoryPress = () => {

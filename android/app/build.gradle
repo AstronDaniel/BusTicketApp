@@ -120,6 +120,19 @@ android {
         jniLibs {
             useLegacyPackaging (findProperty('expo.useLegacyPackaging')?.toBoolean() ?: false)
         }
+        resources {
+            excludes += '/META-INF/{AL2.0,LGPL2.1}'
+            excludes += 'META-INF/androidx.localbroadcastmanager_localbroadcastmanager.version'
+            excludes += 'META-INF/androidx.customview_customview.version'
+            excludes += 'META-INF/androidx.legacy_legacy-support-core-ui.version'
+            excludes += 'META-INF/androidx.drawerlayout_drawerlayout.version'
+            excludes += 'META-INF/androidx.interpolator_interpolator.version'
+            excludes += 'META-INF/androidx.legacy_legacy-support-core-utils.version'
+            excludes += 'META-INF/androidx.slidingpanelayout_slidingpanelayout.version'
+            excludes += 'META-INF/androidx.swiperefreshlayout_swiperefreshlayout.version'
+            excludes += 'META-INF/androidx.appcompat_appcompat.version'
+            excludes += 'META-INF/androidx.*'
+        }
     }
     androidResources {
         ignoreAssetsPattern '!.svn:!.git:!.ds_store:!*.scc:!CVS:!thumbs.db:!picasa.ini:!*~'
@@ -156,6 +169,19 @@ dependencies {
     implementation "androidx.swiperefreshlayout:swiperefreshlayout:1.1.0"
     implementation 'com.google.zxing:core:3.5.2'
     implementation project(':react-native-permissions')
+
+    implementation(project(':react-native-gesture-handler')) {
+        exclude group: 'com.android.support', module: 'support-compat'
+        exclude group: 'androidx.core', module: 'core'
+    }
+    implementation('androidx.core:core:1.13.1') {
+        exclude group: 'com.android.support', module: 'support-compat'
+    }
+
+    // Exclude support-compat from all dependencies
+    configurations.all {
+        exclude group: 'com.android.support', module: 'support-compat'
+    }
 
     def isGifEnabled = (findProperty('expo.gif.enabled') ?: "") == "true";
     def isWebpEnabled = (findProperty('expo.webp.enabled') ?: "") == "true";

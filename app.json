@@ -19,7 +19,12 @@
     ],
     "ios": {
       "supportsTablet": true,
-      "bundleIdentifier": "com.link.receiptGenerator"
+      "bundleIdentifier": "com.link.receiptGenerator",
+      "infoPlist": {
+        "LSSupportsOpeningDocumentsInPlace": true,
+        "UIFileSharingEnabled": true,
+        "NSDocumentsFolderUsageDescription": "This app needs access to the documents folder to share files"
+      }
     },
     "android": {
       "adaptiveIcon": {
@@ -33,11 +38,42 @@
       ]
     },
     "plugins": [
-      ["expo-build-properties", {
-        "android": {
-          "usesCleartextTraffic": true
+      [
+        "expo-build-properties",
+        {
+          "android": {
+            "usesCleartextTraffic": true
+          }
         }
-      }]
+      ],
+      [
+        "@react-native-community/datetimepicker",
+        {
+          "androidPackage": "com.reactcommunity.rndatetimepicker"
+        }
+      ],
+      [
+        "react-native-share",
+        {
+          "platforms": {
+            "ios": {
+              "infoPlist": {
+                "NSDocumentsFolderUsageDescription": "This app needs access to the documents folder to share files",
+                "LSSupportsOpeningDocumentsInPlace": true,
+                "UIFileSharingEnabled": true
+              }
+            },
+            "android": {
+              "intentFilters": [
+                {
+                  "action": "android.intent.action.SEND",
+                  "dataType": "application/pdf"
+                }
+              ]
+            }
+          }
+        }
+      ]
     ],
     "extra": {
       "FIREBASE_API_KEY": "@env:FIREBASE_API_KEY",

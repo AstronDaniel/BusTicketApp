@@ -12,14 +12,13 @@ import { FontAwesome } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
 
-const generateTicketId = () => {
-  return 'TKT-' + Math.random().toString(36).substring(2, 8).toUpperCase();
-};
 
-const generateRandomCode = () => {
-  return Math.random().toString(36).substring(2, 10).toUpperCase();
-};
 
+
+const formatAmount = (amount) => {
+  return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+};
+ 
 const ReceiptPreview = ({ route }) => {
   const { formData } = route.params || {};
   const { user } = useContext(AuthContext);
@@ -27,10 +26,10 @@ const ReceiptPreview = ({ route }) => {
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
   const [qrRef, setQrRef] = useState(null);
   
-  const ticketId = generateTicketId();
-  const randomCode = generateRandomCode();
+
+ 
   const currentDate = new Date();
-  const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
+  const formattedDate = `${currentDate.getFullYear()}-${currentDate.getMonth().toString()+ 1}-${currentDate.getDate()}`;
   const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
 
   useEffect(() => {
@@ -61,7 +60,7 @@ const ReceiptPreview = ({ route }) => {
             PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
             PERMISSIONS.ANDROID.BLUETOOTH_SCAN
           ];
-        } else {
+        } else { 
           permissionsToRequest = [
             PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
             PERMISSIONS.ANDROID.ACCESS_COARSE_LOCATION
@@ -129,7 +128,7 @@ const ReceiptPreview = ({ route }) => {
       Alert.alert('Error', error.message);
     }
   };
-
+ 
   const handleDeviceSelected = async (device) => {
     setShowDeviceSelector(false);
     try {
@@ -137,8 +136,9 @@ const ReceiptPreview = ({ route }) => {
       
       const receiptData = {
         ...formData,
-        ticketId,
-        date: `${formattedDate} ${formattedTime}`
+        date: `${formattedDate} ${formattedTime}`,
+        amountPaid: formatAmount(formData.amountPaid),
+       
       };
       
       await PrintService.printReceipt(receiptData);
@@ -198,7 +198,7 @@ const ReceiptPreview = ({ route }) => {
               margin: 16px 0;
             }
             .divider {
-              border-top: 1px solid #e5e7eb;
+              border-top: 2px dotted #e5e7eb;
               margin: 16px 0;
             }
             .info-row {
@@ -235,36 +235,38 @@ const ReceiptPreview = ({ route }) => {
         </head>
         <body>
           <div class="container">
-            <div class="title">RUKUNDO EGUMEHO TRANSPORTERS</div>
+            <div class="title">LINK BUS TICKET</div>
             
-            <div class="header-info">+256 762076555 | +256 772169814</div>
-            <div class="header-info">Kagadi Taxi Park</div>
-            <div class="header-info">Plot 63 Kagadi</div>
+            <div class="header-info">+256 751206424 | +256 782099992</div>
+            <div class="header-info">1st Floor Solar House</div>
+            <div class="header-info">Plot 63 Muuteesa I Road Katwe</div>
             
-            <div class="location">${formData.from}</div>
+            <div class="location">${formData.numberPlatePrefix.toUpperCase()}  ${' '} ${formData.numberPlatePostfix.toUpperCase()}</div>
             
             <div class="divider"></div>
             
             <div class="info-row">Client Name: ${formData.clientName}</div>
-            <div class="info-row">Ticket ID: ${ticketId}</div>
+            <div class="info-row">Ticket ID: ${formData.ticketId}</div>
             <div class="info-row">Phone No.: ${formData.phoneNumber}</div>
+            <div class="info-row">Temperature: ${formData.temperature}</div>
             <div class="info-row">From: ${formData.from}</div>
             <div class="info-row">To: ${formData.to}</div>
-            <div class="info-row">Status: ${formData.paymentStatus?.name}</div>
-            <div class="info-row">Temperature: ${formData.temperature}</div>
+            <div class="info-row">Payment: ${formData.paymentStatus?.name}</div>
+            
             <div class="info-row">Printed by: ${formData.printedBy || staffName}</div>
-            <div class="info-row">Printed on: ${formattedDate} at ${formattedTime}</div>
+            
             <div class="info-row">Travel Date: ${formattedDate}</div>
             
             <div class="divider"></div>
             
-            <div class="code">Code: ${randomCode}</div>
-            <div class="amount">Paid: UGX ${formData.amountPaid}</div>
+            <div class="code">Code: ${formData.code}</div>
+            <div class="amount">Paid: UGX ${formatAmount(formData.amountPaid)}</div>
             
             <div class="header-info">Visit link below to review Terms and Conditions</div>
+            <div class="divider"></div>
             <div class="header-info">www.link.co.ug/terms-of-service.php</div>
             
-             <div class="divid"></div>
+            <div class="divider"></div>
             
             <div class="footer">Thank you for travelling with us</div>
             
@@ -302,37 +304,71 @@ const ReceiptPreview = ({ route }) => {
       <ScrollView style={styles.container}>
         <View style={styles.card}>
           <Text style={styles.title} onPress={() => Linking.openURL('#')}>
-            RUKUNDO EGUMEHO TRANSPORTERS
+           LINK BUS TICKET
           </Text>
 
           <View style={styles.section}>
-            <Text style={styles.texthead}>+256 762076555 | +256 772169814</Text>
-            <Text style={styles.texthead}>Kagadi Taxi Park</Text>
-            <Text style={styles.texthead}>Plot 63 Kagadi</Text>
-            <Text style={styles.headingbig}>{formData.from}</Text>
+            <Text style={styles.texthead}>+256 751206424 | +256 782099992</Text>
+            <Text style={styles.texthead}>First Floor Solar House</Text>
+            <Text style={styles.texthead}>Plot 63 Muuteesa I Road</Text>
+            <View style={styles.numberPlate}>
+               <Text style={styles.headingbig}>{formData.numberPlatePrefix.toUpperCase()}</Text>
+               <Text style={styles.headingbig}>{formData.numberPlatePostfix.toUpperCase()}</Text>
+            </View>
+           
             <Text style={styles.divider}></Text>
+          </View>
+ 
+          <View style={styles.section}>
+            <View style={styles.row}>
+              <Text style={styles.label}>Client Name</Text>
+              <Text style={styles.value}>:  {formData.clientName}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Ticket ID</Text>
+              <Text style={styles.value}>:  {formData.ticketId}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Phone No.</Text>
+              <Text style={styles.value}>:  {formData.phoneNumber}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Temperature</Text>
+              <Text style={styles.value}>:  {formData.temperature}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>From</Text>
+              <Text style={styles.value}>:  {formData.from}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>To</Text>
+              <Text style={styles.value}>:  {formData.to}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Payment</Text>
+              <Text style={styles.value}>:  {formData.paymentStatus?.name}</Text>
+            </View>
+            <View style={styles.row}>
+              <Text style={styles.label}>Printed by</Text>
+              <Text style={styles.value}>:  {formData.printedBy || staffName}</Text>
+            </View>
+            {/* <View style={styles.row}>
+              <Text style={styles.label}>Printed on:</Text>
+              <Text style={styles.value}>{formattedDate} at {formattedTime}</Text>
+            </View> */}
+            <View style={styles.row}>
+              <Text style={styles.label}>Travel Date</Text>
+              <Text style={styles.value}>:  {formattedDate}</Text>
+            </View>
           </View>
 
           <View style={styles.section}>
-            <Text style={styles.text}>Client Name: {formData.clientName}</Text>
-            <Text style={styles.text}>Ticket ID: {ticketId}</Text>
-            <Text style={styles.text}>Phone No.: {formData.phoneNumber}</Text>
-            <Text style={styles.text}>From: {formData.from}</Text>
-            <Text style={styles.text}>To: {formData.to}</Text>
-            <Text style={styles.text}>Status: {formData.paymentStatus?.name}</Text>
-            <Text style={styles.text}>Temperature: {formData.temperature}</Text>
-            <Text style={styles.text}>Printed by: {formData.printedBy || staffName}</Text>
-            <Text style={styles.text}>Printed on: {formattedDate} at {formattedTime}</Text>
-            <Text style={styles.text}>Travel Date: {formattedDate}</Text>
-          </View>
-
-          <View style={styles.section}>
             <Text style={styles.divider}></Text>
-            <Text style={styles.heading2}>Code: {randomCode}</Text>
-            <Text style={styles.heading2}>Paid: UGX {formData.amountPaid}</Text>
+            <Text style={styles.heading2}>Code: {formData.code}</Text>
+            <Text style={styles.heading2}>Paid: UGX {formatAmount(formData.amountPaid)}</Text>
             <Text style={styles.texthead}>Visit link below to review Terms and Conditions</Text>
             <Text style={styles.divider}></Text>
-            <Text style={styles.texthead}>www.egumero.co.ug/terms-of-service.php</Text>
+            <Text style={styles.texthead}>www.link.co.ug/terms-of-service.php</Text>
           </View>
 
           <View style={styles.divider} />
@@ -340,11 +376,11 @@ const ReceiptPreview = ({ route }) => {
 
           <View style={styles.qrContainer}>
             <QRCode
-              value={`TICKET:${ticketId}`}
+              value={`TICKET:${formData.ticketId}`}
               size={128}
               getRef={(ref) => setQrRef(ref)}
             />
-          </View>
+          </View> 
         </View>
         <View style={styles.buttonContainer}>
           <TouchableOpacity style={styles.printButton} onPress={handlePrint}>
@@ -396,13 +432,21 @@ const styles = StyleSheet.create({
     marginBottom: 8,
     textAlign: 'center',
   },
+  numberPlate: {
+   
+    display:'flex',
+    flexDirection:'row',
+    
+    justifyContent:'center',
+    gap:15
+  },
   heading: {
     fontSize: 18,
     fontWeight: '600',
     marginBottom: 8,
   },
   heading2: {
-    fontSize: 20,
+    fontSize: 25,
     fontWeight: 'bold',
     marginBottom: 8,
   },
@@ -427,9 +471,12 @@ const styles = StyleSheet.create({
     marginBottom: 8,
   },
   divider: {
-    height: 1,
-    backgroundColor: '#e5e7eb',
+    height: 2,
+    borderStyle: 'dotted',
+    borderWidth: 1,
+    borderColor: '#888',
     marginVertical: 16,
+    fontWeight:'bold',
   },
   amount: {
     fontSize: 20,
@@ -493,6 +540,23 @@ const styles = StyleSheet.create({
     color: '#fff',
     fontSize: 16,
     fontWeight: '600',
+  },
+  row: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    marginBottom: 10,
+  },
+  label: {
+    fontSize: 16,
+    color: '#4b5563',
+    flex: 1,
+  },
+  value: {
+    fontSize: 16,
+    color: '#4b5563',
+    flex: 1,
+    textAlign: 'left',
+    // marginLeft:4,
   },
 });
 

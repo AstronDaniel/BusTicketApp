@@ -366,6 +366,9 @@ const getFilteredHistory = () => {
 
 const generatePDF = async () => {
   const filteredData = getFilteredHistory();
+  const filteredSummary = calculateSummary(filteredData);
+  const reportType = activeFilter.charAt(0).toUpperCase() + activeFilter.slice(1);
+
   const html = `
     <html>
       <head>
@@ -380,14 +383,14 @@ const generatePDF = async () => {
       </head>
       <body>
         <div class="header">
-          <h1>Ticket History Report</h1>
+          <h1>${reportType} Ticket History Report</h1>
           <p>Generated on ${new Date().toLocaleString()}</p>
         </div>
         
         <div class="summary">
           <h2>Summary</h2>
-          <p>Total Tickets: ${summaryData.totalTickets}</p>
-          <p>Total Revenue: UGX ${summaryData.totalRevenue.toLocaleString()}</p>
+          <p>Total Tickets: ${filteredSummary.totalTickets}</p>
+          <p>Total Revenue: UGX ${filteredSummary.totalRevenue.toLocaleString()}</p>
           ${selectedUser ? `<p>Staff Member: ${selectedUser}</p>` : ''}
         </div>
 

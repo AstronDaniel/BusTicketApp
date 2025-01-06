@@ -1,23 +1,26 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, 
-  ActivityIndicator, Modal, TextInput, Platform, ScrollView 
+  ActivityIndicator, Modal, TextInput, Platform, ScrollView, RefreshControl,Dimensions
 } from 'react-native';
 import { AuthContext } from "../contexts/AuthContext";
 import { db } from '../config/firebase';
 import { collection, query, where, getDocs, doc, getDoc } from 'firebase/firestore';
 import { LinearGradient } from 'expo-linear-gradient';
-import { Ionicons } from '@expo/vector-icons';
+import { Ionicons, MaterialIcons } from '@expo/vector-icons';
 import DateTimePicker from '@react-native-community/datetimepicker';
 import RNHTMLtoPDF from 'react-native-html-to-pdf';
 import Share from 'react-native-share';
-
-const HistoryScreen = ({ navigation }) => {
+// new imports
+import { LineChart } from 'react-native-chart-kit';
+import Animated, { FadeInUp } from 'react-native-reanimated';
+ 
+const HistoryScreen = ({ navigation }) => { 
   const { user } = useContext(AuthContext);
   const [history, setHistory] = useState([]);
   const [loading, setLoading] = useState(true);
   const [searchQuery, setSearchQuery] = useState('');
-  const [filterModalVisible, setFilterModalVisible] = useState(false);
+  const [filterModalVisible, setFilterModalVisible] = useState(false); 
   const [selectedFilter, setSelectedFilter] = useState('all');
   const [startDate, setStartDate] = useState(new Date(new Date().setMonth(new Date().getMonth() - 1)));
   const [endDate, setEndDate] = useState(new Date());
@@ -33,16 +36,72 @@ const HistoryScreen = ({ navigation }) => {
   });
   const [usersList, setUsersList] = useState([]);
   const [selectedUser, setSelectedUser] = useState(null);
+// new variables
+// Add these new state variables right after your existing useState declarations
+const [activeFilter, setActiveFilter] = useState('all');
+const [viewMode, setViewMode] = useState('list');
+const [refreshing, setRefreshing] = useState(false);
+const [todayStats, setTodayStats] = useState({
+  ticketsSold: 0,
+  revenue: 0,
+  percentageChange: 0
+});
+const [revenueData, setRevenueData] = useState({
+  labels: [],
+  datasets: [{
+    data: []
+  }]
+});
 
-  useEffect(() => {
-    if (user?.email !== 'astrondaniel6@gmail.com') {
-      Alert.alert('Access Denied', 'You do not have permission to access this screen.');
-      navigation.goBack();
-      return;
-    }
 
+    // new functions for stats and revenue
+    // Add this function after your existing useEffect
+    const calculateTodayStats = (data) => {
+      const today = new Date();
+      const todayString = today.toLocaleDateString();
+      
+      const todayTickets = data.filter(ticket => {
+        const ticketDate = new Date(ticket.date.split(' ')[0].split('-').reverse().join('-'));
+        return ticketDate.toLocaleDateString() === todayString;
+      });
+    
+      const todayRevenue = todayTickets.reduce((sum, ticket) => sum + parseFloat(ticket.amountPaid), 0);
+      
+      return {
+        ticketsSold: todayTickets.length,
+        revenue: todayRevenue,
+        percentageChange: 0 // You can calculate this by comparing with yesterday's data
+      };
+    };
+    
+    // Add this function to calculate revenue data for the chart
+    const calculateRevenueData = (data) => {
+      const last7Days = Array.from({length: 7}, (_, i) => {
+        const date = new Date();
+        date.setDate(date.getDate() - i);
+        return date;
+      }).reverse();
+    
+      const labels = last7Days.map(date => date.toLocaleDateString('en-US', { weekday: 'short' }));
+      const revenues = last7Days.map(date => {
+        const dayTickets = data.filter(ticket => {
+          const ticketDate = new Date(ticket.date.split(' ')[0].split('-').reverse().join('-'));
+          return ticketDate.toLocaleDateString() === date.toLocaleDateString();
+        });
+        return dayTickets.reduce((sum, ticket) => sum + parseFloat(ticket.amountPaid), 0);
+      });
+    
+      return {
+        labels,
+        datasets: [{
+          data: revenues
+        }]
+      };
+    };
+    // fetch history data
     const fetchHistory = async () => {
       try {
+        setLoading(true);
         const historyQuery = query(collection(db, 'tickets'));
         const historySnapshot = await getDocs(historyQuery);
         const historyData = await Promise.all(historySnapshot.docs.map(async (ticketDoc) => {
@@ -73,6 +132,11 @@ const HistoryScreen = ({ navigation }) => {
         setUsersList(users);
         
         setHistory(historyData);
+
+        // Calculate new statistics
+      setTodayStats(calculateTodayStats(historyData));
+      setRevenueData(calculateRevenueData(historyData));
+
         const summary = calculateSummary(historyData);
         setSummaryData(summary);
       } catch (error) {
@@ -80,9 +144,112 @@ const HistoryScreen = ({ navigation }) => {
         Alert.alert('Error', 'Failed to load history.');
       } finally {
         setLoading(false);
+        setRefreshing(false);
       }
     };
   
+    // Add these components right after your existing components
+    const StatisticsCard = () => (
+      <Animated.View 
+        entering={FadeInUp.delay(200)}
+        style={styles.statsCard}
+      >
+        <View style={styles.statsHeader}>
+          <View>
+            <Text style={styles.statsTitle}>Today's Stats</Text>
+            <Text style={styles.statsSubtitle}>Quick overview of today's activity</Text>
+          </View>
+          <View style={styles.statsIcon}>
+            <MaterialIcons name="bar-chart" color="#fff" size={24} />
+          </View>
+        </View>
+        
+        <View style={styles.statsGrid}>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsLabel}>Tickets Sold</Text>
+            <Text style={styles.statsValue}>{todayStats.ticketsSold}</Text>
+          </View>
+          <View style={styles.statsItem}>
+            <Text style={styles.statsLabel}>Revenue</Text>
+            <Text style={styles.statsValue}>
+              UGX {todayStats.revenue.toLocaleString()}
+            </Text>
+          </View>
+        </View>
+      </Animated.View>
+    );
+    
+    const RevenueChart = () => (
+      <Animated.View 
+        entering={FadeInUp.delay(400)}
+        style={styles.chartCard}
+      >
+        <View style={styles.chartHeader}>
+          <Text style={styles.chartTitle}>Revenue Trends</Text>
+          <TouchableOpacity 
+            style={styles.refreshButton}
+            onPress={() => fetchHistory()}
+          >
+            <Ionicons name="refresh" color="#3b82f6" size={20} />
+          </TouchableOpacity>
+        </View>
+        
+        <LineChart
+          data={revenueData}
+          width={Dimensions.get('window').width - 40}
+          height={220}
+          chartConfig={{
+            backgroundColor: '#ffffff',
+            backgroundGradientFrom: '#ffffff',
+            backgroundGradientTo: '#ffffff',
+            decimalPlaces: 0,
+            color: (opacity = 1) => `rgba(59, 130, 246, ${opacity})`,
+            style: {
+              borderRadius: 16,
+            },
+          }}
+          bezier
+          style={styles.chart}
+        />
+      </Animated.View>
+    );
+    
+    const FilterChips = () => (
+      <ScrollView 
+        horizontal 
+        showsHorizontalScrollIndicator={false}
+        style={styles.filterChips}
+      >
+        {['all', 'today', 'week', 'month'].map((filter) => (
+          <TouchableOpacity 
+            key={filter}
+            style={[
+              styles.filterChip,
+              activeFilter === filter && styles.filterChipActive
+            ]}
+            onPress={() => setActiveFilter(filter)}
+          >
+            <Text style={[
+              styles.filterChipText,
+              activeFilter === filter && styles.filterChipTextActive
+            ]}>
+              {filter.charAt(0).toUpperCase() + filter.slice(1)}
+            </Text>
+          </TouchableOpacity>
+        ))}
+      </ScrollView>
+    );
+    
+    
+
+  useEffect(() => {
+    if (user?.email !== 'astrondaniel6@gmail.com') {
+      Alert.alert('Access Denied', 'You do not have permission to access this screen.');
+      navigation.goBack();
+      return;
+    }
+
+
   
   
     fetchHistory();
@@ -153,122 +320,129 @@ const HistoryScreen = ({ navigation }) => {
     return [headers, ...rows].map(row => row.join(',')).join('\n');
   };
 
-  const getFilteredHistory = () => {
-    const lowerCaseQuery = searchQuery.toLowerCase().trim();
-    
-    return history.filter(ticket => {
-      // Search matching
-      const searchFields = [
-        ticket.clientName?.toLowerCase() || '',
-        ticket.ticketId?.toLowerCase() || '',
-        ticket.from?.toLowerCase() || '',
-        ticket.to?.toLowerCase() || '',
-        ticket.email?.toLowerCase() || '',  // Changed from printedBy to email
-        ticket.numberPlate?.toLowerCase() || ''
-      ];
-      
-      const matchesSearch = !searchQuery || searchFields.some(field => 
-        field.includes(lowerCaseQuery)
-      );
+const getFilteredHistory = () => {
+  const lowerCaseQuery = searchQuery.toLowerCase().trim();
   
-      // User filtering - now using email instead of printedBy
-      const matchesUser = !selectedUser || ticket.email === selectedUser;
-      
-      // Date filtering
-      const ticketDate = new Date(ticket.date.split(' ')[0].split('-').reverse().join('-'));
-      const startOfDay = new Date(startDate);
-      startOfDay.setHours(0, 0, 0, 0);
-      const endOfDay = new Date(endDate);
-      endOfDay.setHours(23, 59, 59, 999);
-      
-      const matchesDateRange = ticketDate >= startOfDay && ticketDate <= endOfDay;
-  
-      return matchesSearch && matchesUser && matchesDateRange;
-    }).sort((a, b) => {
-      const dateA = new Date(a.date.split(' ')[0].split('-').reverse().join('-'));
-      const dateB = new Date(b.date.split(' ')[0].split('-').reverse().join('-'));
-      return dateB - dateA;
-    });
-  };
-  const generatePDF = async (data) => {
-    const html = `
-      <html>
-        <head>
-          <style>
-            body { font-family: 'Helvetica'; }
-            table { width: 100%; border-collapse: collapse; }
-            th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
-            th { background-color: #f2f2f2; }
-            .header { text-align: center; margin-bottom: 20px; }
-            .summary { margin-bottom: 20px; }
-          </style>
-        </head>
-        <body>
-          <div class="header">
-            <h1>Ticket History Report</h1>
-            <p>Generated on ${new Date().toLocaleString()}</p>
-          </div>
-          
-          <div class="summary">
-            <h2>Summary</h2>
-            <p>Total Tickets: ${summaryData.totalTickets}</p>
-            <p>Total Revenue: UGX ${summaryData.totalRevenue.toLocaleString()}</p>
-            ${selectedUser ? `<p>Staff Member: ${selectedUser}</p>` : ''}
-          </div>
+  return history.filter(ticket => {
+    // First apply the active filter
+    const ticketDate = new Date(ticket.date.split(' ')[0].split('-').reverse().join('-'));
+    const matchesActiveFilter = () => {
+      switch(activeFilter) {
+        case 'today':
+          return isToday(ticketDate);
+        case 'week':
+          return isThisWeek(ticketDate);
+        case 'month':
+          return ticketDate.getMonth() === new Date().getMonth() &&
+                 ticketDate.getFullYear() === new Date().getFullYear();
+        case 'all':
+        default:
+          return true;
+      }
+    };
 
-          <table>
+    // Existing search and filter logic
+    const searchFields = [
+      ticket.clientName?.toLowerCase() || '',
+      ticket.ticketId?.toLowerCase() || '',
+      ticket.from?.toLowerCase() || '',
+      ticket.to?.toLowerCase() || '',
+      ticket.email?.toLowerCase() || '',
+      ticket.numberPlate?.toLowerCase() || ''
+    ];
+    const matchesSearch = !searchQuery || searchFields.some(field => 
+      field.includes(lowerCaseQuery)
+    );
+    const matchesUser = !selectedUser || ticket.email === selectedUser;
+    const matchesDateRange = ticketDate >= startDate && ticketDate <= endDate;
+
+    return matchesSearch && matchesUser && matchesDateRange && matchesActiveFilter();
+  }).sort((a, b) => {
+    const dateA = new Date(a.date.split(' ')[0].split('-').reverse().join('-'));
+    const dateB = new Date(b.date.split(' ')[0].split('-').reverse().join('-'));
+    return dateB - dateA;
+  });
+};
+
+const generatePDF = async () => {
+  const filteredData = getFilteredHistory();
+  const html = `
+    <html>
+      <head>
+        <style>
+          body { font-family: 'Helvetica'; }
+          table { width: 100%; border-collapse: collapse; }
+          th, td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+          th { background-color: #f2f2f2; }
+          .header { text-align: center; margin-bottom: 20px; }
+          .summary { margin-bottom: 20px; }
+        </style>
+      </head>
+      <body>
+        <div class="header">
+          <h1>Ticket History Report</h1>
+          <p>Generated on ${new Date().toLocaleString()}</p>
+        </div>
+        
+        <div class="summary">
+          <h2>Summary</h2>
+          <p>Total Tickets: ${summaryData.totalTickets}</p>
+          <p>Total Revenue: UGX ${summaryData.totalRevenue.toLocaleString()}</p>
+          ${selectedUser ? `<p>Staff Member: ${selectedUser}</p>` : ''}
+        </div>
+
+        <table>
+          <tr>
+            <th>Ticket ID</th>
+            <th>Client Name</th>
+            <th>Route</th>
+            <th>Amount</th>
+            <th>Date</th>
+            <th>Staff</th>
+          </tr>
+          ${filteredData.map(ticket => `
             <tr>
-              <th>Ticket ID</th>
-              <th>Client Name</th>
-              <th>Route</th>
-              <th>Amount</th>
-              <th>Date</th>
-              <th>Staff</th>
+              <td>${ticket.ticketId}</td>
+              <td>${ticket.clientName}</td>
+              <td>${ticket.from} → ${ticket.to}</td>
+              <td>UGX ${ticket.amountPaid.toLocaleString()}</td>
+              <td>${ticket.date}</td>
+              <td>${ticket.printedBy}</td>
             </tr>
-            ${data.map(ticket => `
-              <tr>
-                <td>${ticket.ticketId}</td>
-                <td>${ticket.clientName}</td>
-                <td>${ticket.from} → ${ticket.to}</td>
-                <td>UGX ${ticket.amountPaid.toLocaleString()}</td>
-                <td>${ticket.date}</td>
-                <td>${ticket.printedBy}</td>
-              </tr>
-            `).join('')}
-          </table>
-        </body>
-      </html>
-    `;
+          `).join('')}
+        </table>
+      </body>
+    </html>
+  `;
 
-    try {
-      const options = {
-        html,
-        fileName: 'TicketHistory',
-        directory: 'Documents',
-      };
+  try {
+    const options = {
+      html,
+      fileName: 'TicketHistory',
+      directory: 'Documents',
+    };
 
-      const file = await RNHTMLtoPDF.convert(options);
-      return file.filePath;
-    } catch (error) {
-      console.error('PDF Generation Error:', error);
-      throw error;
-    }
-  };
+    const file = await RNHTMLtoPDF.convert(options);
+    return file.filePath;
+  } catch (error) {
+    console.error('PDF Generation Error:', error);
+    throw error;
+  }
+};
 
-  const handleExport = async () => {
-    try {
-      const filtered = getFilteredHistory();
-      const pdfPath = await generatePDF(filtered);
-      
-      await Share.open({
-        url: `file://${pdfPath}`,
-        type: 'application/pdf',
-        title: 'Ticket History Report'
-      });
-    } catch (error) {
-      Alert.alert('Error', 'Failed to export data');
-    }
-  };
+const handleExport = async () => {
+  try {
+    const pdfPath = await generatePDF();
+    
+    await Share.open({
+      url: `file://${pdfPath}`,
+      type: 'application/pdf',
+      title: 'Ticket History Report'
+    });
+  } catch (error) {
+    Alert.alert('Error', 'Failed to export data');
+  }
+};
 
   const onDateChange = (event, selectedDate) => {
     setShowDatePicker(false);
@@ -308,42 +482,42 @@ const HistoryScreen = ({ navigation }) => {
     </View>
   );
 
-  const renderItem = ({ item }) => (
-    <TouchableOpacity 
-      style={styles.itemContainer}
-      onPress={() => setSelectedTicket(item)}
+const renderItem = ({ item }) => (
+  <TouchableOpacity 
+    style={[styles.itemContainer, viewMode === 'grid' && styles.gridItemContainer]}
+    onPress={() => setSelectedTicket(item)}
+  >
+    <LinearGradient
+      colors={['#6a11cb', '#2575fc']} // Updated gradient colors
+      start={{x: 0, y: 0}}
+      end={{x: 1, y: 1}}
+      style={styles.gradientCard}
     >
-      <LinearGradient
-        colors={['#2c3e50', '#3498db']}
-        start={{x: 0, y: 0}}
-        end={{x: 1, y: 1}}
-        style={styles.gradientCard}
-      >
-        <View style={styles.ticketHeader}>
-          <Text style={styles.ticketId}>#{item.ticketId}</Text>
-          <Text style={styles.dateText}>{item.date}</Text>
+      <View style={styles.ticketHeader}>
+        <Text style={styles.ticketId}>#{item.ticketId}</Text>
+        <Text style={styles.dateText}>{item.date}</Text>
+      </View>
+      
+      <Text style={styles.clientName}>{item.clientName}</Text>
+      
+      <View style={styles.detailsContainer}>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>From:</Text>
+          <Text style={styles.value}>{item.from}</Text>
         </View>
         
-        <Text style={styles.clientName}>{item.clientName}</Text>
-        
-        <View style={styles.detailsContainer}>
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>From:</Text>
-            <Text style={styles.value}>{item.from}</Text>
-          </View>
-          
-          <View style={styles.detailRow}>
-            <Text style={styles.label}>To:</Text>
-            <Text style={styles.value}>{item.to}</Text>
-          </View>
+        <View style={styles.detailRow}>
+          <Text style={styles.label}>To:</Text>
+          <Text style={styles.value}>{item.to}</Text>
         </View>
-        
-        <Text style={styles.printedBy}>
-          Printed by: {item.printedByUserName || item.printedBy}
-        </Text>
-      </LinearGradient>
-    </TouchableOpacity>
-  );
+      </View>
+      
+      <Text style={styles.printedBy}>
+        Printed by: {item.printedByUserName || item.printedBy}
+      </Text>
+    </LinearGradient>
+  </TouchableOpacity>
+);
 
   const renderTicketDetailModal = () => {
     if (!selectedTicket) return null;
@@ -416,17 +590,53 @@ const HistoryScreen = ({ navigation }) => {
     );
   };
 
-  const renderFilterResults = () => {
-    const filtered = getFilteredHistory();
-    console.log("Filtered Results:", filtered);
-    return (
-      <>
-        <View style={styles.filterResultsHeader}>
-          <Text style={styles.filterResultsText}>
-            Found {filtered.length} tickets
-          </Text>
-        </View>
+const renderHeader = () => (
+  <View style={styles.header}>
+    <LinearGradient
+      colors={['#2c3e50', '#3498db']}
+      start={{x: 0, y: 0}}
+      end={{x: 1, y: 1}}
+      style={styles.headerGradient}
+    >
+      <Text style={styles.headerTitle}>Ticket History</Text>
+    </LinearGradient>
+    <View style={styles.searchContainer}>
+      <TextInput
+        style={styles.searchInput}
+        placeholder="Search tickets..."
+        value={searchQuery}
+        onChangeText={setSearchQuery}
+        placeholderTextColor="#999"
+      />
+      <TouchableOpacity onPress={() => setFilterModalVisible(true)}>
+        <Ionicons name="filter" size={24} color="#fff" />
+      </TouchableOpacity>
+      <TouchableOpacity onPress={handleExport}>
+        <Ionicons name="download-outline" size={24} color="#fff" />
+      </TouchableOpacity>
+      <TouchableOpacity 
+        style={styles.viewModeButton}
+        onPress={() => setViewMode(viewMode === 'list' ? 'grid' : 'list')}
+      >
+        <Ionicons name={viewMode === 'list' ? 'grid' : 'list'} size={24} color="#fff" />
+      </TouchableOpacity>
+    </View>
+  </View>
+);
+
+const renderFilterResults = () => {
+  const filtered = getFilteredHistory();
+  console.log("Filtered Results:", filtered);
+  return (
+    <>
+      <View style={styles.filterResultsHeader}>
+        <Text style={styles.filterResultsText}>
+          Found {filtered.length} tickets
+        </Text>
+      </View>
+      {viewMode === 'list' ? (
         <FlatList
+          key="list" // Add key to force re-render
           data={filtered}
           renderItem={renderItem}
           keyExtractor={(item) => item.id}
@@ -438,9 +648,25 @@ const HistoryScreen = ({ navigation }) => {
             </View>
           )}
         />
-      </>
-    );
-  };
+      ) : (
+        <FlatList
+          key="grid" // Add key to force re-render
+          data={filtered}
+          renderItem={renderItem} // You can create a separate renderGridItem if needed
+          keyExtractor={(item) => item.id}
+          contentContainerStyle={styles.listContainer}
+          showsVerticalScrollIndicator={false}
+          numColumns={2}
+          ListEmptyComponent={() => (
+            <View style={styles.noResultsContainer}>
+              <Text style={styles.noResultsText}>No tickets found</Text>
+            </View>
+          )}
+        />
+      )}
+    </>
+  );
+};
 
   const renderFilterModal = () => (
     <View style={styles.modalContent}>
@@ -514,34 +740,24 @@ const HistoryScreen = ({ navigation }) => {
       colors={['#1a1a1a', '#2c3e50']}
       style={styles.container}
     >
-      <View style={styles.header}>
-        <LinearGradient
-          colors={['#2c3e50', '#3498db']}
-          start={{x: 0, y: 0}}
-          end={{x: 1, y: 1}}
-          style={styles.headerGradient}
-        >
-          <Text style={styles.headerTitle}>Ticket History</Text>
-        </LinearGradient>
-        <View style={styles.searchContainer}>
-          <TextInput
-            style={styles.searchInput}
-            placeholder="Search tickets..."
-            value={searchQuery}
-            onChangeText={setSearchQuery}
-            placeholderTextColor="#999"
-          />
-          <TouchableOpacity onPress={() => setFilterModalVisible(true)}>
-            <Ionicons name="filter" size={24} color="#fff" />
-          </TouchableOpacity>
-          <TouchableOpacity onPress={handleExport}>
-            <Ionicons name="download-outline" size={24} color="#fff" />
-          </TouchableOpacity>
-        </View>
-      </View>
-      
+      {renderHeader()}
+      <ScrollView 
+      refreshControl={
+        <RefreshControl
+          refreshing={refreshing}
+          onRefresh={() => {
+            setRefreshing(true);
+            fetchHistory();
+          }}
+        />
+      }
+    >
+      <StatisticsCard />
+      <RevenueChart />
+      <FilterChips />
       {renderSummarySection()}
       {renderFilterResults()}
+    </ScrollView>
       
       {/* Date Picker */}
       {showDatePicker && Platform.OS === 'android' && (
@@ -598,6 +814,25 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 3,
   },
+  searchContainer: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    padding: 10,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    borderRadius: 8,
+    margin: 10,
+  },
+  searchInput: {
+    flex: 1,
+    color: '#fff',
+    marginRight: 10,
+  },
+  viewModeButton: {
+    marginLeft: 10,
+    padding: 5,
+    backgroundColor: '#3498db',
+    borderRadius: 8,
+  },
   listContainer: {
     padding: 16,
     paddingBottom: 24,
@@ -613,12 +848,21 @@ const styles = StyleSheet.create({
     },
     shadowOpacity: 0.3,
     shadowRadius: 8,
+    backgroundColor: '#2c3e50', // Add background color for better visibility
+  },
+  gridItemContainer: {
+    width: (Dimensions.get('window').width / 2) - 24, // Adjust width for grid items
+    marginHorizontal: 8,
   },
   gradientCard: {
     padding: 20,
     borderRadius: 12,
     borderWidth: 1,
     borderColor: 'rgba(255,255,255,0.1)',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 4 },
+    shadowOpacity: 0.3,
+    shadowRadius: 8,
   },
   ticketHeader: {
     flexDirection: 'row',
@@ -688,19 +932,6 @@ const styles = StyleSheet.create({
     marginTop: 12,
     fontSize: 16,
     color: '#ffffff',
-  },
-  searchContainer: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    padding: 10,
-    backgroundColor: 'rgba(255,255,255,0.1)',
-    borderRadius: 8,
-    margin: 10,
-  },
-  searchInput: {
-    flex: 1,
-    color: '#fff',
-    marginRight: 10,
   },
   summaryContainer: {
     backgroundColor: 'rgba(255,255,255,0.1)',
@@ -869,7 +1100,107 @@ const styles = StyleSheet.create({
   },
   userButtonTextActive: {
     color: '#fff',
-  }
+  },
+  // new styles
+  statsCard: {
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#1e40af',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  statsHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  statsTitle: {
+    fontSize: 20,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  statsSubtitle: {
+    fontSize: 14,
+    color: '#93c5fd',
+  },
+  statsGrid: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+  },
+  statsItem: {
+    flex: 1,
+    backgroundColor: 'rgba(255,255,255,0.1)',
+    padding: 12,
+    borderRadius: 8,
+    marginHorizontal: 4,
+  },
+  statsLabel: {
+    fontSize: 14,
+    color: '#93c5fd',
+    marginBottom: 4,
+  },
+  statsValue: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#ffffff',
+  },
+  chartCard: {
+    margin: 16,
+    padding: 16,
+    borderRadius: 12,
+    backgroundColor: '#ffffff',
+    shadowColor: '#000',
+    shadowOffset: { width: 0, height: 2 },
+    shadowOpacity: 0.25,
+    shadowRadius: 3.84,
+    elevation: 5,
+  },
+  chartHeader: {
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    alignItems: 'center',
+    marginBottom: 16,
+  },
+  chartTitle: {
+    fontSize: 18,
+    fontWeight: 'bold',
+    color: '#1f2937',
+  },
+  refreshButton: {
+    padding: 8,
+    borderRadius: 20,
+    backgroundColor: '#eff6ff',
+  },
+  chart: {
+    marginVertical: 8,
+    borderRadius: 16,
+  },
+  filterChips: {
+    paddingHorizontal: 16,
+    marginBottom: 16,
+  },
+  filterChip: {
+    paddingHorizontal: 16,
+    paddingVertical: 8,
+    borderRadius: 20,
+    backgroundColor: '#f3f4f6',
+    marginRight: 8,
+  },
+  filterChipActive: {
+    backgroundColor: '#2563eb',
+  },
+  filterChipText: {
+    color: '#4b5563',
+    fontSize: 14,
+  },
+  filterChipTextActive: {
+    color: '#ffffff',
+  },
 });
 
 export default HistoryScreen;

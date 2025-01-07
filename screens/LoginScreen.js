@@ -45,10 +45,13 @@ const LoginScreen = ({ navigation }) => {
         } catch (error) {
           console.error("Login User Error:", error.message);
           
-          if (error.message==`Login User Error: [FirebaseError: Firebase: A network AuthError (such as timeout, interrupted connection or unreachable host) has occurred. (auth/network-request-failed).]`) {
-            Alert.alert("Network Issue","Please Connect to network to Login");
-          } 
-          Alert.alert("Login Failed","Invalid email or password");
+          if (error.message.includes('network-request-failed')) {
+            Alert.alert("Network Issue", "Please connect to a stable network to login.");
+          } else if (error.message.includes('wrong-password') || error.message.includes('user-not-found')) {
+            Alert.alert("Login Failed", "Invalid email or password.");
+          } else {
+            Alert.alert("Login Failed", "An unexpected error occurred. Please try again.");
+          }
           setLoading(false);
         }
       } else {

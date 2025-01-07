@@ -630,7 +630,7 @@ const renderTicketDetailModal = () => {
                 <Text style={styles.sectionTitle}>Client Information</Text>
               </View>
               <View style={styles.infoCard}>
-                <Text style={styles.clientName}>{selectedTicket.clientName}</Text>
+                <Text style={styles.clientName1}>{selectedTicket.clientName}</Text>
                 <StatusBadge status={selectedTicket.paymentStatus} />
               </View>
             </View>
@@ -1016,10 +1016,10 @@ const styles = StyleSheet.create({
     textShadowOffset: { width: 1, height: 1 },
     textShadowRadius: 2,
   },
-  clientName: {
+  clientName1: {
     fontSize: 17,
     fontWeight: '500',
-    color: '#ffffff',
+    color: '#222',
     marginBottom: 8,
     textShadowColor: 'rgba(0, 0, 0, 0.3)',
     textShadowOffset: { width: 1, height: 1 },

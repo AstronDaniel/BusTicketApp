@@ -1,14 +1,14 @@
-import React, { useState, useContext } from 'react';
-import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback } from 'react-native';
+import React, { useState, useContext, useEffect } from 'react';
+import { View, Text, TextInput, TouchableOpacity, StyleSheet, Alert, Image, ScrollView, KeyboardAvoidingView, Platform, Keyboard, TouchableWithoutFeedback, PermissionsAndroid, Linking, ActivityIndicator } from 'react-native';
 import * as Animatable from 'react-native-animatable';
 import axios from 'axios';
 import { db } from '../config/firebase';
 import { collection, addDoc } from 'firebase/firestore';
 import { AuthContext } from "../contexts/AuthContext";
+import Geolocation from '@react-native-community/geolocation';
 
 const GenerateReceiptScreen = ({ navigation }) => {
   const { user } = useContext(AuthContext);
-  // console.log("user:",user.email)
   const [formData, setFormData] = useState({
     clientName: '',
     phoneNumber: '',
@@ -21,10 +21,124 @@ const GenerateReceiptScreen = ({ navigation }) => {
     numberPlate: '', // Added field
     numberPlatePrefix: '', // Added field
     numberPlatePostfix: '', // Added field
+    code: '', // Added field
+    ticketId: '', // Added field
   });
+  const [showMoreFields, setShowMoreFields] = useState(false); // State to toggle more fields
+  const [location, setLocation] = useState(null); // State to store location
+  const [locationError, setLocationError] = useState(null);
+  const [isLoadingLocation, setIsLoadingLocation] = useState(false);
 
-  
- 
+  useEffect(() => {
+    let locationWatchId = null;
+
+    const requestLocationPermission = async () => {
+      setIsLoadingLocation(true);
+      try {
+        if (Platform.OS === 'ios') {
+          const auth = await Geolocation.requestAuthorization('whenInUse');
+          if (auth === 'granted') {
+            getLocation();
+          } else {
+            setLocationError('Location permission denied');
+            handleLocationError();
+          }
+        } else {
+          const granted = await PermissionsAndroid.request(
+            PermissionsAndroid.PERMISSIONS.ACCESS_FINE_LOCATION,
+            {
+              title: "Location Permission",
+              message: "This app needs access to your location to print the report.",
+              buttonNeutral: "Ask Me Later",
+              buttonNegative: "Cancel",
+              buttonPositive: "OK"
+            }
+          );
+          if (granted === PermissionsAndroid.RESULTS.GRANTED) {
+            getLocation();
+          } else {
+            setLocationError('Location permission denied');
+            handleLocationError();
+          }
+        }
+      } catch (err) {
+        console.warn('Error requesting location permission:', err);
+        setLocationError('Failed to request location permission');
+        handleLocationError();
+      } finally {
+        setIsLoadingLocation(false);
+      }
+    };
+
+    const getLocation = () => {
+      // Clear any existing location watch
+      if (locationWatchId) {
+        Geolocation.clearWatch(locationWatchId);
+      }
+
+      // Start watching location
+      locationWatchId = Geolocation.watchPosition(
+        (position) => {
+          const { latitude, longitude } = position.coords;
+          setLocation({ 
+            latitude, 
+            longitude,
+            accuracy: position.coords.accuracy,
+            timestamp: position.timestamp
+          });
+          setLocationError(null);
+          setIsLoadingLocation(false);
+        },
+        (error) => {
+          console.error('Location error:', error);
+          setLocationError(error.message);
+          setIsLoadingLocation(false);
+          handleLocationError();
+        },
+        { 
+          enableHighAccuracy: true, 
+          timeout: 20000, 
+          maximumAge: 10000,
+          distanceFilter: 10 // minimum distance (meters) between updates
+        }
+      );
+    };
+
+    const handleLocationError = () => {
+      Alert.alert(
+        'Location Error',
+        'Unable to get your location. Please check your device settings.',
+        [
+          { 
+            text: 'Open Settings', 
+            onPress: () => {
+              Platform.OS === 'ios' 
+                ? Linking.openURL('app-settings:')
+                : Linking.openSettings();
+            }
+          },
+          { 
+            text: 'Try Again',
+            onPress: () => requestLocationPermission()
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
+      );
+    };
+
+    // Initial location request
+    requestLocationPermission();
+
+    // Cleanup function
+    return () => {
+      if (locationWatchId) {
+        Geolocation.clearWatch(locationWatchId);
+      }
+    };
+  }, []); // Empty dependency array for initial mount only
 
   const handleLocationSelect = (type) => {
     navigation.navigate('LocationSelection', {
@@ -64,6 +178,28 @@ const GenerateReceiptScreen = ({ navigation }) => {
  
 
   const handlePreview = async () => {
+    if (!location) {
+      Alert.alert(
+        'Location Required',
+        'Please enable location services to continue.',
+        [
+          {
+            text: 'Open Settings',
+            onPress: () => {
+              Platform.OS === 'ios' 
+                ? Linking.openURL('app-settings:')
+                : Linking.openSettings();
+            }
+          },
+          {
+            text: 'Cancel',
+            style: 'cancel'
+          }
+        ]
+      );
+      return;
+    }
+
     if (validateForm()) {
       const numberPlatePrefix = formData.numberPlate.substring(0, 3);
       const numberPlatePostfix = formData.numberPlate.substring(3, 10);
@@ -71,8 +207,7 @@ const GenerateReceiptScreen = ({ navigation }) => {
       const generateTicketId = () => {
         return `${numberPlatePrefix.toUpperCase()}` + Math.random().toString(36).substring(2, 8).toUpperCase();
       };
-       const randomTicketId = generateTicketId();
-      const ticketId = generateTicketId();
+      const randomTicketId = generateTicketId();
       const currentDate = new Date();
       const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
       const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
@@ -82,12 +217,12 @@ const GenerateReceiptScreen = ({ navigation }) => {
         printedBy: formData.printedBy || user.email || 'Default Staff Member', // Default value if empty
         userId: user.uid, // Include userId
         email: user.email, // Include email
-        ticketId,
+        ticketId: formData.ticketId || randomTicketId, // Use random value if empty
         date: `${formattedDate} ${formattedTime}`,
-        code:`${randomCode}`,
-        ticketId:`${randomTicketId}`,
+        code: formData.code || randomCode, // Use random value if empty
         numberPlatePrefix, // Added field
         numberPlatePostfix, // Added field
+        location, // Include location data
       };
 
       try {
@@ -282,6 +417,44 @@ const GenerateReceiptScreen = ({ navigation }) => {
       )
     },
     {
+      key: 'viewMoreFieldsToggle',
+      content: (
+        <TouchableOpacity onPress={() => setShowMoreFields(!showMoreFields)}>
+          <Text style={styles.viewMoreText}>
+            {showMoreFields ? 'View Less Fields' : 'View More Fields'}
+          </Text>
+        </TouchableOpacity>
+      )
+    },
+    showMoreFields && {
+      key: 'code', // Added field
+      content: (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Code</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.code}
+            onChangeText={value => setFormData(prev => ({ ...prev, code: value }))}
+            placeholder="Enter code"
+          />
+        </View>
+      )
+    },
+    showMoreFields && {
+      key: 'ticketId', // Added field
+      content: (
+        <View style={styles.inputContainer}>
+          <Text style={styles.label}>Ticket ID</Text>
+          <TextInput
+            style={styles.input}
+            value={formData.ticketId}
+            onChangeText={value => setFormData(prev => ({ ...prev, ticketId: value }))}
+            placeholder="Enter ticket ID"
+          />
+        </View>
+      )
+    },
+    {
       key: 'submit',
       content: (
         <TouchableOpacity style={styles.submitButton} onPress={handlePreview}>
@@ -289,7 +462,7 @@ const GenerateReceiptScreen = ({ navigation }) => {
         </TouchableOpacity>
       )
     }
-  ];
+  ].filter(Boolean); // Filter out false values
 
   return (
     <TouchableWithoutFeedback onPress={Keyboard.dismiss}>
@@ -298,6 +471,17 @@ const GenerateReceiptScreen = ({ navigation }) => {
         behavior={Platform.OS === 'ios' ? 'padding' : 'height'}
       >
         <ScrollView showsVerticalScrollIndicator={false}>
+          {isLoadingLocation && (
+            <View style={styles.loadingContainer}>
+              <ActivityIndicator size="large" color="#007AFF" />
+              <Text style={styles.loadingText}>Getting location...</Text>
+            </View>
+          )}
+          {locationError && (
+            <View style={styles.errorContainer}>
+              <Text style={styles.errorText}>Location error: {locationError}</Text>
+            </View>
+          )}
           {formFields.map(field => (
             <View key={field.key}>
               {field.content}
@@ -373,7 +557,32 @@ const styles = StyleSheet.create({
   },
   locationText: {
     fontSize: 16
-  }
+  },
+  viewMoreText: {
+    color: '#007AFF',
+    textAlign: 'center',
+    marginVertical: 10,
+    fontSize: 16,
+  },
+  loadingContainer: {
+    padding: 15,
+    alignItems: 'center',
+  },
+  loadingText: {
+    marginTop: 10,
+    color: '#666',
+  },
+  errorContainer: {
+    padding: 15,
+    backgroundColor: '#ffebee',
+    marginHorizontal: 15,
+    marginVertical: 10,
+    borderRadius: 8,
+  },
+  errorText: {
+    color: '#c62828',
+    fontSize: 14,
+  },
 });
 
 export default GenerateReceiptScreen;

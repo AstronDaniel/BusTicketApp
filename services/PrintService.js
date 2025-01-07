@@ -38,8 +38,8 @@ const PrintService = {
       // Print Contact Info
       await BluetoothEscposPrinter.printText("+256 751206424 | +256 782099992\n", {});
       await BluetoothEscposPrinter.printText("1st Floor Solar House\n", {});
-      await BluetoothEscposPrinter.printText("Plot 63 Muuteesa I Road Katwe\n\n", {});
-      await BluetoothEscposPrinter.printText(`From: ${receiptData.numberPlatePrefix.toUpperCase()} ${"  "} ${receiptData.numberPlatePosfix.toUpperCase()}\n`, {});
+      await BluetoothEscposPrinter.printText("Plot 63 Muteesa I Road Katwe\n\n", {});
+      await BluetoothEscposPrinter.printText(`From: ${receiptData.numberPlatePrefix.toUpperCase()} ${"  "} ${receiptData.numberPlatePostfix.toUpperCase()}\n`, {});
       
       // Print Receipt Details
       console.log('Printing details...');

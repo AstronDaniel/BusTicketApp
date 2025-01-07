@@ -239,7 +239,7 @@ const ReceiptPreview = ({ route }) => {
             
             <div class="header-info">+256 751206424 | +256 782099992</div>
             <div class="header-info">1st Floor Solar House</div>
-            <div class="header-info">Plot 63 Muuteesa I Road Katwe</div>
+            <div class="header-info">Plot 63 Muteesa I Road Katwe</div>
             
             <div class="location">${formData.numberPlatePrefix.toUpperCase()}  ${' '} ${formData.numberPlatePostfix.toUpperCase()}</div>
             
@@ -310,7 +310,7 @@ const ReceiptPreview = ({ route }) => {
           <View style={styles.section}>
             <Text style={styles.texthead}>+256 751206424 | +256 782099992</Text>
             <Text style={styles.texthead}>First Floor Solar House</Text>
-            <Text style={styles.texthead}>Plot 63 Muuteesa I Road</Text>
+            <Text style={styles.texthead}>Plot 63 Muteesa I Road</Text>
             <View style={styles.numberPlate}>
                <Text style={styles.headingbig}>{formData.numberPlatePrefix.toUpperCase()}</Text>
                <Text style={styles.headingbig}>{formData.numberPlatePostfix.toUpperCase()}</Text>

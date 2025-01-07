@@ -1,7 +1,7 @@
 import React, { useContext, useEffect, useState } from 'react';
 import { 
   View, Text, StyleSheet, FlatList, TouchableOpacity, Alert, 
-  ActivityIndicator, Modal, TextInput, Platform, ScrollView, RefreshControl,Dimensions
+  ActivityIndicator, Modal, TextInput, Platform, ScrollView, RefreshControl,Dimensions,Linking
 } from 'react-native';
 import { AuthContext } from "../contexts/AuthContext";
 import { db } from '../config/firebase';
@@ -485,113 +485,245 @@ const handleExport = async () => {
     </View>
   );
 
-const renderItem = ({ item }) => (
-  <TouchableOpacity 
-    style={[styles.itemContainer, viewMode === 'grid' && styles.gridItemContainer]}
-    onPress={() => setSelectedTicket(item)}
-  >
-    <LinearGradient
-      colors={['#6a11cb', '#2575fc']} // Updated gradient colors
-      start={{x: 0, y: 0}}
-      end={{x: 1, y: 1}}
-      style={styles.gradientCard}
+  const renderItem = ({ item }) => (
+    <TouchableOpacity 
+      style={[styles.itemContainer, viewMode === 'grid' && styles.gridItemContainer]}
+      onPress={() => setSelectedTicket(item)}
     >
-      <View style={styles.ticketHeader}>
-        <Text style={styles.ticketId}>#{item.ticketId}</Text>
-        <Text style={styles.dateText}>{item.date}</Text>
-      </View>
-      
-      <Text style={styles.clientName}>{item.clientName}</Text>
-      
-      <View style={styles.detailsContainer}>
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>From:</Text>
-          <Text style={styles.value}>{item.from}</Text>
-        </View>
-        
-        <View style={styles.detailRow}>
-          <Text style={styles.label}>To:</Text>
-          <Text style={styles.value}>{item.to}</Text>
-        </View>
-      </View>
-      
-      <Text style={styles.printedBy}>
-        Printed by: {item.printedByUserName || item.printedBy}
-      </Text>
-    </LinearGradient>
-  </TouchableOpacity>
-);
+      <Animated.View
+        entering={FadeInUp.duration(300)}
+        style={styles.animatedContainer}
+      >
+        <LinearGradient
+          colors={['#1e293b', '#334155']}
+          start={{x: 0, y: 0}}
+          end={{x: 1, y: 1}}
+          style={styles.gradientCard}
+        >
+          {/* Status Badge */}
+          <View style={[
+            styles.statusBadge,
+            { backgroundColor: item.paymentStatus?.name === 'Cash' ? '#dcfce7' : '#dbeafe' }
+          ]}>
+            <View style={[
+              styles.statusDot,
+              { backgroundColor: item.paymentStatus?.name === 'Cash' ? '#16a34a' : '#2563eb' }
+            ]} />
+            <Text style={[
+              styles.statusText,
+              { color: item.paymentStatus?.name === 'Cash' ? '#16a34a' : '#2563eb' }
+            ]}>
+              {item.paymentStatus?.name || 'N/A'}
+            </Text>
+          </View>
+  
+          {/* Ticket Header */}
+          <View style={styles.ticketHeader}>
+            <View>
+              <Text style={styles.ticketId}>#{item.ticketId}</Text>
+              <Text style={styles.dateText}>{item.date}</Text>
+            </View>
+            <View style={styles.amountContainer}>
+              <Text style={styles.amountLabel}>Amount</Text>
+              <Text style={styles.amountValue}>
+                UGX {Number(item.amountPaid).toLocaleString()}
+              </Text>
+            </View>
+          </View>
+  
+          {/* Client Info */}
+          <View style={styles.clientSection}>
+            <View style={styles.clientIconContainer}>
+              <Ionicons name="person-circle-outline" size={24} color="#94a3b8" />
+            </View>
+            <View style={styles.clientInfo}>
+              <Text style={styles.clientName}>{item.clientName}</Text>
+              <Text style={styles.printedBy}>
+                by {item.printedByUserName || item.printedBy}
+              </Text>
+            </View>
+          </View>
+  
+          {/* Journey Details */}
+          <View style={styles.journeyContainer}>
+            <View style={styles.locationContainer}>
+              <View style={[styles.locationDot, { backgroundColor: '#22c55e' }]} />
+              <View style={styles.locationLine} />
+              <View style={[styles.locationDot, { backgroundColor: '#ef4444' }]} />
+            </View>
+            <View style={styles.journeyDetails}>
+              <Text style={styles.journeyText}>{item.from}</Text>
+              <Text style={styles.journeyText}>{item.to}</Text>
+            </View>
+          </View>
+  
+          {/* Bus Info */}
+          {item.numberPlate && (
+            <View style={styles.busInfo}>
+              <MaterialIcons name="airline-seat-recline-normal" size={20} color="#94a3b8" />
+              <Text style={styles.busText}>{item.numberPlate}</Text>
+            </View>
+          )}
+        </LinearGradient>
+      </Animated.View>
+    </TouchableOpacity>
+  );
 
-  const renderTicketDetailModal = () => {
-    if (!selectedTicket) return null;
-    return (
-      <View style={styles.modalContainer}>
-        <View style={[styles.modalContent, { width: '90%' }]}>
+const renderTicketDetailModal = () => {
+  if (!selectedTicket) return null;
+
+  const openInGoogleMaps = () => {
+    if (selectedTicket.location) {
+      const { latitude, longitude } = selectedTicket.location;
+      const url = `https://www.google.com/maps?q=${latitude},${longitude}`;
+      Linking.openURL(url);
+    }
+  };
+
+  const StatusBadge = ({ status }) => (
+    <View style={[
+      styles.statusBadge,
+      { backgroundColor: status?.name === 'Cash' ? '#dcfce7' : '#dbeafe' }
+    ]}>
+      <View style={[
+        styles.statusDot,
+        { backgroundColor: status?.name === 'Cash' ? '#16a34a' : '#2563eb' }
+      ]} />
+      <Text style={[
+        styles.statusText,
+        { color: status?.name === 'Cash' ? '#16a34a' : '#2563eb' }
+      ]}>
+        {status?.name || 'N/A'}
+      </Text>
+    </View>
+  );
+
+  return (
+    <View style={styles.modalOverlay}>
+      <Animated.View 
+        entering={FadeInUp.duration(300)}
+        style={styles.modalContainer}
+      >
+        <LinearGradient
+          colors={['#ffffff', '#f8fafc']}
+          style={styles.modalContent}
+        >
+          {/* Header Section */}
           <View style={styles.modalHeader}>
-            <Text style={styles.modalTitle}>Ticket Details</Text>
-            <TouchableOpacity onPress={() => setSelectedTicket(null)}>
-              <Ionicons name="close" size={24} color="#333" />
+            <View>
+              <Text style={styles.modalTitle}>Ticket Details</Text>
+              <Text style={styles.modalSubtitle}>#{selectedTicket.ticketId}</Text>
+            </View>
+            <TouchableOpacity 
+              style={styles.closeIconButton}
+              onPress={() => setSelectedTicket(null)}
+            >
+              <Ionicons name="close" size={24} color="#64748b" />
             </TouchableOpacity>
           </View>
 
-          <ScrollView>
-            <View style={styles.ticketDetailRow}>
-              <Text style={styles.detailLabel}>Ticket ID:</Text>
-              <Text style={styles.detailValue}>#{selectedTicket.ticketId}</Text>
+          <ScrollView showsVerticalScrollIndicator={false}>
+            {/* Client Info Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="person-circle-outline" size={24} color="#64748b" />
+                <Text style={styles.sectionTitle}>Client Information</Text>
+              </View>
+              <View style={styles.infoCard}>
+                <Text style={styles.clientName}>{selectedTicket.clientName}</Text>
+                <StatusBadge status={selectedTicket.paymentStatus} />
+              </View>
             </View>
 
-            <View style={styles.ticketDetailRow}>
-              <Text style={styles.detailLabel}>Client Name:</Text>
-              <Text style={styles.detailValue}>{selectedTicket.clientName}</Text>
+            {/* Journey Details Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="bus-outline" size={24} color="#64748b" />
+                <Text style={styles.sectionTitle}>Journey Details</Text>
+              </View>
+              <View style={styles.journeyCard}>
+                <View style={styles.locationContainer}>
+                  <View style={styles.locationDot} />
+                  <View style={styles.locationLine} />
+                  <View style={[styles.locationDot, { backgroundColor: '#ef4444' }]} />
+                </View>
+                <View style={styles.journeyInfo}>
+                  <View style={styles.journeyPoint}>
+                    <Text style={styles.journeyLabel}>From</Text>
+                    <Text style={styles.journeyValue}>{selectedTicket.from}</Text>
+                  </View>
+                  <View style={styles.journeyPoint}>
+                    <Text style={styles.journeyLabel}>To</Text>
+                    <Text style={styles.journeyValue}>{selectedTicket.to}</Text>
+                  </View>
+                </View>
+              </View>
             </View>
 
-            <View style={styles.ticketDetailRow}>
-              <Text style={styles.detailLabel}>From:</Text>
-              <Text style={styles.detailValue}>{selectedTicket.from}</Text>
+            {/* Payment Details Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <Ionicons name="card-outline" size={24} color="#64748b" />
+                <Text style={styles.sectionTitle}>Payment Details</Text>
+              </View>
+              <View style={styles.paymentCard}>
+                <View style={styles.paymentRow}>
+                  <Text style={styles.paymentLabel}>Amount Paid</Text>
+                  <Text style={styles.paymentAmount}>
+                    UGX {Number(selectedTicket.amountPaid).toLocaleString()}
+                  </Text>
+                </View>
+                <View style={styles.paymentRow}>
+                  <Text style={styles.paymentLabel}>Date</Text>
+                  <Text style={styles.paymentDate}>{selectedTicket.date}</Text>
+                </View>
+              </View>
             </View>
 
-            <View style={styles.ticketDetailRow}>
-              <Text style={styles.detailLabel}>To:</Text>
-              <Text style={styles.detailValue}>{selectedTicket.to}</Text>
+            {/* Bus Details Section */}
+            <View style={styles.sectionContainer}>
+              <View style={styles.sectionHeader}>
+                <MaterialIcons name="airline-seat-recline-normal" size={24} color="#64748b" />
+                <Text style={styles.sectionTitle}>Bus Information</Text>
+              </View>
+              <View style={styles.busCard}>
+                <Text style={styles.busNumber}>
+                  {selectedTicket.numberPlate || 'N/A'}
+                </Text>
+              </View>
             </View>
 
-            <View style={styles.ticketDetailRow}>
-              <Text style={styles.detailLabel}>Date:</Text>
-              <Text style={styles.detailValue}>{selectedTicket.date}</Text>
-            </View>
-
-            <View style={styles.ticketDetailRow}>
-              <Text style={styles.detailLabel}>Amount:</Text>
-              <Text style={styles.detailValue}>
-                UGX {Number(selectedTicket.amountPaid).toLocaleString()}
-              </Text>
-            </View>
-
-            <View style={styles.ticketDetailRow}>
-              <Text style={styles.detailLabel}>Payment Status:</Text>
-              <Text style={styles.detailValue}>
-                {selectedTicket.paymentStatus?.name || 'N/A'}
-              </Text>
-            </View>
-
-            <View style={styles.ticketDetailRow}>
-              <Text style={styles.detailLabel}>Bus Number:</Text>
-              <Text style={styles.detailValue}>
-                {selectedTicket.numberPlate || 'N/A'}
-              </Text>
-            </View>
+            {/* Location Section */}
+            {selectedTicket.location && (
+              <View style={styles.sectionContainer}>
+                <View style={styles.sectionHeader}>
+                  <Ionicons name="location-outline" size={24} color="#64748b" />
+                  <Text style={styles.sectionTitle}>Ticket Location</Text>
+                </View>
+                <TouchableOpacity 
+                  onPress={openInGoogleMaps}
+                  style={styles.locationCard}
+                >
+                  <View style={styles.locationContent}>
+                    <Text style={styles.locationText}>View on Google Maps</Text>
+                    <Ionicons name="open-outline" size={20} color="#3b82f6" />
+                  </View>
+                </TouchableOpacity>
+              </View>
+            )}
           </ScrollView>
 
           <TouchableOpacity 
             style={styles.closeButton}
             onPress={() => setSelectedTicket(null)}
           >
-            <Text style={styles.closeButtonText}>Close</Text>
+            <Text style={styles.closeButtonText}>Close Ticket</Text>
           </TouchableOpacity>
-        </View>
-      </View>
-    );
-  };
+        </LinearGradient>
+      </Animated.View>
+    </View>
+  );
+};
 
 const renderHeader = () => (
   <View style={styles.header}>
@@ -1204,6 +1336,358 @@ const styles = StyleSheet.create({
   filterChipTextActive: {
     color: '#ffffff',
   },
+  mapLink: {
+    flex: 2,
+    flexDirection: 'row',
+    alignItems: 'center',
+    justifyContent: 'space-between',
+    paddingVertical: 5,
+  },
+  mapLinkText: {
+    color: '#007AFF',
+    fontSize: 16,
+    textDecorationLine: 'underline',
+  },
+  // Add these styles to your StyleSheet
+modalOverlay: {
+  flex: 1,
+  backgroundColor: 'rgba(0,0,0,0.5)',
+  justifyContent: 'center',
+  padding: 20,
+},
+modalContainer: {
+  borderRadius: 24,
+  overflow: 'hidden',
+  elevation: 5,
+  shadowColor: '#000',
+  shadowOffset: { width: 0, height: 2 },
+  shadowOpacity: 0.25,
+  shadowRadius: 3.84,
+},
+modalContent: {
+  backgroundColor: '#ffffff',
+  borderRadius: 24,
+  padding: 24,
+  maxHeight: '90%',
+},
+modalHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 24,
+},
+modalTitle: {
+  fontSize: 24,
+  fontWeight: 'bold',
+  color: '#1e293b',
+  marginBottom: 4,
+},
+modalSubtitle: {
+  fontSize: 16,
+  color: '#64748b',
+},
+closeIconButton: {
+  padding: 8,
+  borderRadius: 12,
+  backgroundColor: '#f1f5f9',
+},
+sectionContainer: {
+  marginBottom: 24,
+},
+sectionHeader: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 12,
+},
+sectionTitle: {
+  fontSize: 18,
+  fontWeight: '600',
+  color: '#334155',
+  marginLeft: 8,
+},
+infoCard: {
+  backgroundColor: '#f8fafc',
+  borderRadius: 16,
+  padding: 16,
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+},
+clientName: {
+  fontSize: 18,
+  fontWeight: '600',
+  color: '#334155',
+},
+statusBadge: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 6,
+  paddingHorizontal: 12,
+  borderRadius: 20,
+},
+statusDot: {
+  width: 8,
+  height: 8,
+  borderRadius: 4,
+  marginRight: 6,
+},
+statusText: {
+  fontSize: 14,
+  fontWeight: '500',
+},
+journeyCard: {
+  backgroundColor: '#f8fafc',
+  borderRadius: 16,
+  padding: 16,
+  flexDirection: 'row',
+},
+locationContainer: {
+  width: 24,
+  alignItems: 'center',
+  marginRight: 12,
+},
+locationDot: {
+  width: 12,
+  height: 12,
+  borderRadius: 6,
+  backgroundColor: '#22c55e',
+},
+locationLine: {
+  width: 2,
+  height: 40,
+  backgroundColor: '#94a3b8',
+  marginVertical: 4,
+},
+journeyInfo: {
+  flex: 1,
+},
+journeyPoint: {
+  marginBottom: 16,
+},
+journeyLabel: {
+  fontSize: 14,
+  color: '#64748b',
+  marginBottom: 4,
+},
+journeyValue: {
+  fontSize: 16,
+  fontWeight: '500',
+  color: '#334155',
+},
+paymentCard: {
+  backgroundColor: '#f8fafc',
+  borderRadius: 16,
+  padding: 16,
+},
+paymentRow: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'center',
+  marginBottom: 12,
+},
+paymentLabel: {
+  fontSize: 14,
+  color: '#64748b',
+},
+paymentAmount: {
+  fontSize: 18,
+  fontWeight: '600',
+  color: '#16a34a',
+},
+paymentDate: {
+  fontSize: 16,
+  color: '#334155',
+},
+busCard: {
+  backgroundColor: '#f8fafc',
+  borderRadius: 16,
+  padding: 16,
+  alignItems: 'center',
+},
+busNumber: {
+  fontSize: 24,
+  fontWeight: '600',
+  color: '#334155',
+},
+locationCard: {
+  backgroundColor: '#f8fafc',
+  borderRadius: 16,
+  padding: 16,
+},
+locationContent: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  justifyContent: 'space-between',
+},
+locationText: {
+  fontSize: 16,
+  color: '#3b82f6',
+  fontWeight: '500',
+},
+closeButton: {
+  backgroundColor: '#ef4444',
+  borderRadius: 12,
+  padding: 16,
+  alignItems: 'center',
+  marginTop: 16,
+},
+closeButtonText: {
+  color: '#ffffff',
+  fontSize: 16,
+  fontWeight: '600',
+},
+// Add these new styles to your StyleSheet
+itemContainer: {
+  marginBottom: 16,
+  borderRadius: 16,
+  elevation: 8,
+  shadowColor: '#000',
+  shadowOffset: {
+    width: 0,
+    height: 4,
+  },
+  shadowOpacity: 0.3,
+  shadowRadius: 8,
+},
+gridItemContainer: {
+  flex: 1,
+  margin: 8,
+  minHeight: 280,
+},
+animatedContainer: {
+  borderRadius: 16,
+  overflow: 'hidden',
+},
+gradientCard: {
+  padding: 16,
+  borderRadius: 16,
+  borderWidth: 1,
+  borderColor: 'rgba(255,255,255,0.1)',
+},
+statusBadge: {
+  position: 'absolute',
+  top: 12,
+  right: 12,
+  flexDirection: 'row',
+  alignItems: 'center',
+  paddingVertical: 4,
+  paddingHorizontal: 8,
+  borderRadius: 12,
+  zIndex: 1,
+},
+statusDot: {
+  width: 6,
+  height: 6,
+  borderRadius: 3,
+  marginRight: 4,
+},
+statusText: {
+  fontSize: 12,
+  fontWeight: '600',
+},
+ticketHeader: {
+  flexDirection: 'row',
+  justifyContent: 'space-between',
+  alignItems: 'flex-start',
+  marginBottom: 16,
+  paddingBottom: 16,
+  borderBottomWidth: 1,
+  borderBottomColor: 'rgba(255,255,255,0.1)',
+},
+ticketId: {
+  fontSize: 18,
+  fontWeight: '700',
+  color: '#ffffff',
+  marginBottom: 4,
+},
+dateText: {
+  fontSize: 12,
+  color: '#94a3b8',
+},
+amountContainer: {
+  alignItems: 'flex-end',
+},
+amountLabel: {
+  fontSize: 12,
+  color: '#94a3b8',
+  marginBottom: 2,
+},
+amountValue: {
+  fontSize: 16,
+  fontWeight: '700',
+  color: '#22c55e',
+},
+clientSection: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  marginBottom: 16,
+},
+clientIconContainer: {
+  width: 40,
+  height: 40,
+  borderRadius: 20,
+  backgroundColor: 'rgba(148, 163, 184, 0.1)',
+  justifyContent: 'center',
+  alignItems: 'center',
+  marginRight: 12,
+},
+clientInfo: {
+  flex: 1,
+},
+clientName: {
+  fontSize: 16,
+  fontWeight: '600',
+  color: '#ffffff',
+  marginBottom: 2,
+},
+printedBy: {
+  fontSize: 12,
+  color: '#94a3b8',
+},
+journeyContainer: {
+  flexDirection: 'row',
+  backgroundColor: 'rgba(148, 163, 184, 0.1)',
+  borderRadius: 12,
+  padding: 12,
+  marginBottom: 12,
+},
+locationContainer: {
+  width: 20,
+  alignItems: 'center',
+  marginRight: 12,
+},
+locationDot: {
+  width: 8,
+  height: 8,
+  borderRadius: 4,
+},
+locationLine: {
+  width: 2,
+  height: 24,
+  backgroundColor: '#94a3b8',
+  marginVertical: 4,
+},
+journeyDetails: {
+  flex: 1,
+  justifyContent: 'space-between',
+},
+journeyText: {
+  fontSize: 14,
+  color: '#ffffff',
+  marginBottom: 8,
+},
+busInfo: {
+  flexDirection: 'row',
+  alignItems: 'center',
+  backgroundColor: 'rgba(148, 163, 184, 0.1)',
+  borderRadius: 8,
+  padding: 8,
+},
+busText: {
+  fontSize: 14,
+  color: '#94a3b8',
+  marginLeft: 8,
+},
 });
 
 export default HistoryScreen;

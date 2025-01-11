@@ -136,7 +136,7 @@ const ReceiptPreview = ({ route }) => {
       
       const receiptData = {
         ...formData,
-        date: `${formattedDate} ${formattedTime}`,
+        date: `${formattedDate}`,
         amountPaid: formatAmount(formData.amountPaid),
        
       };
@@ -158,136 +158,171 @@ const ReceiptPreview = ({ route }) => {
         console.error('QR Code generation error:', error);
         qrBase64 = '';
       }
-
+  
       const htmlContent = `
-        <!DOCTYPE html>
-        <html>
-        <head>
-          <meta charset="utf-8">
-          <style>
-            body {
-              font-family: system-ui, -apple-system, sans-serif;
-              margin: 0;
-              padding: 20px;
-              max-width: 400px;
-              margin: 0 auto;
-            }
-            .container {
-              background: white;
-              padding: 20px;
-              border-radius: 8px;
-              box-shadow:0 2px 5px #eee;
-            }
-            .title {
-              font-size: 30px;
-              font-weight: bold;
-              color: #2563eb;
-              text-align: center;
-              margin-bottom: 16px;
-            }
-            .header-info {
-              text-align: center;
-              color: #4b5563;
-              font-size: 16px;
-              margin-bottom: 4px;
-            }
-            .location {
-              font-size: 29px;
-              font-weight: 600;
-              text-align: center;
-              margin: 16px 0;
-            }
-            .divider {
-              border-top: 2px dotted #e5e7eb;
-              margin: 16px 0;
-            }
-            .info-row {
-              font-size: 16px;
-              color: #4b5563;
-              margin-bottom: 10px;
-              padding-bottom: 10px;
-            }
-            .code {
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 8px;
-            }
-            .amount {
-              font-size: 20px;
-              font-weight: bold;
-              margin-bottom: 8px;
-            }
-            .footer {
-              text-align: center;
-              color: #4b5563;
-              font-size: 16px;
-              margin-top: 16px;
-            }
-            .qr-container {
-              text-align: center;
-              margin-top: 20px;
-            }
-            .qr-code {
-              width: 128px;
-              height: 128px;
-            }
-          </style>
-        </head>
-        <body>
-          <div class="container">
-            <div class="title">LINK BUS TICKET</div>
-            
-            <div class="header-info">+256 751206424 | +256 782099992</div>
-            <div class="header-info">1st Floor Solar House</div>
-            <div class="header-info">Plot 63 Muteesa I Road Katwe</div>
-            
-            <div class="location">${formData.numberPlatePrefix.toUpperCase()}  ${' '} ${formData.numberPlatePostfix.toUpperCase()}</div>
-            
-            <div class="divider"></div>
-            
-            <div class="info-row">Client Name: ${formData.clientName}</div>
-            <div class="info-row">Ticket ID: ${formData.ticketId}</div>
-            <div class="info-row">Phone No.: ${formData.phoneNumber}</div>
-            <div class="info-row">Temperature: ${formData.temperature}</div>
-            <div class="info-row">From: ${formData.from}</div>
-            <div class="info-row">To: ${formData.to}</div>
-            <div class="info-row">Payment: ${formData.paymentStatus?.name}</div>
-            
-            <div class="info-row">Printed by: ${formData.printedBy || staffName}</div>
-            
-            <div class="info-row">Travel Date: ${formattedDate}</div>
-            
-            <div class="divider"></div>
-            
-            <div class="code">Code: ${formData.code}</div>
-            <div class="amount">Paid: UGX ${formatAmount(formData.amountPaid)}</div>
-            
-            <div class="header-info">Visit link below to review Terms and Conditions</div>
-            <div class="divider"></div>
-            <div class="header-info">www.link.co.ug/terms-of-service.php</div>
-            
-            <div class="divider"></div>
-            
-            <div class="footer">Thank you for travelling with us</div>
-            
-            ${qrBase64 ? `
-              <div class="qr-container">
-                <img src="data:image/png;base64,${qrBase64}" class="qr-code" />
-              </div>
-            ` : ''}
-          </div>
-        </body>
-        </html>
-      `;
-
-      const { uri } = await Print.printToFileAsync({
+      <!DOCTYPE html>
+      <html>
+      <head>
+        <meta charset="utf-8">
+        <style>
+          body {
+            font-family: system-ui, -apple-system, sans-serif;
+            margin: 0;
+            padding: 20px;
+            max-width: 400px;
+            margin: 0 auto;
+          }
+          .container {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            box-shadow:0 2px 5px #eee;
+          }
+          .title {
+            font-size: 30px;
+            font-weight: bold;
+            color: #2563eb;
+            text-align: center;
+            margin-bottom: 16px;
+          }
+          .header-info {
+            text-align: center;
+            color: #4b5563;
+            font-size: 16px;
+            margin-bottom: 4px;
+          }
+          .location {
+            font-size: 29px;
+            font-weight: 600;
+            text-align: center;
+            margin: 16px 0;
+          }
+          .divider {
+            border-top: 2px dotted #e5e7eb;
+            margin: 16px 0;
+          }
+          .info-row {
+            font-size: 16px;
+            color: #4b5563;
+            margin-bottom: 10px;
+            padding-bottom: 10px;
+          }
+          .code {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+          .amount {
+            font-size: 20px;
+            font-weight: bold;
+            margin-bottom: 8px;
+          }
+          .footer {
+            text-align: center;
+            color: #4b5563;
+            font-size: 16px;
+            margin-top: 16px;
+          }
+          .qr-container {
+            text-align: center;
+            margin-top: 20px;
+          }
+          .qr-code {
+            width: 128px;
+            height: 128px;
+          }
+        </style>
+      </head>
+      <body>
+        <div class="container">
+          <div class="title">LINK BUS TICKET</div>
+          
+          <div class="header-info">+256 751206424 | +256 782099992</div>
+          <div class="header-info">1st Floor Solar House</div>
+          <div class="header-info">Plot 63 Muteesa I Road Katwe</div>
+          
+          <div class="location">${formData.numberPlatePrefix.toUpperCase()}  ${' '} ${formData.numberPlatePostfix.toUpperCase()}</div>
+          
+          <div class="divider"></div>
+          
+          <div class="info-row">Client Name: ${formData.clientName}</div>
+          <div class="info-row">Ticket ID: ${formData.ticketId}</div>
+          <div class="info-row">Phone No.: ${formData.phoneNumber}</div>
+          <div class="info-row">Temperature: ${formData.temperature}</div>
+          <div class="info-row">From: ${formData.from}</div>
+          <div class="info-row">To: ${formData.to}</div>
+          <div class="info-row">Payment: ${formData.paymentStatus?.name}</div>
+          
+          <div class="info-row">Printed by: ${formData.printedBy || staffName}</div>
+          
+          <div class="info-row">Travel Date: ${formattedDate}</div>
+          
+          <div class="divider"></div>
+          
+          <div class="code">Code: ${formData.code}</div>
+          <div class="amount">Paid: UGX ${formatAmount(formData.amountPaid)}</div>
+          
+          <div class="header-info">Visit link below to review Terms and Conditions</div>
+          <div class="divider"></div>
+          <div class="header-info">www.link.co.ug/terms-of-service.php</div>
+          
+          <div class="divider"></div>
+          
+          <div class="footer">Thank you for travelling with us</div>
+          
+          ${qrBase64 ? `
+            <div class="qr-container">
+              <img src="data:image/png;base64,${qrBase64}" class="qr-code" />
+            </div>
+          ` : ''}
+        </div>
+      </body>
+      </html>
+    `;
+  
+      // Explicitly create the options object with proper typing
+      const printOptions = {
         html: htmlContent,
         base64: false,
-      });
-      await Sharing.shareAsync(uri);
+        width: 612, // Standard A4 width in points
+        height: 792, // Standard A4 height in points
+        margins: {
+          left: 20,
+          top: 20,
+          right: 20,
+          bottom: 20
+        }
+      };
+  
+      // Add error handling and logging
+      try {
+        console.log('Starting PDF export...');
+        const result = await Print.printToFileAsync(printOptions);
+        console.log('PDF generated successfully:', result.uri);
+        
+        if (!result.uri) {
+          throw new Error('PDF generation failed - no URI returned');
+        }
+        
+        await Sharing.shareAsync(result.uri, {
+          mimeType: 'application/pdf',
+          dialogTitle: 'Save Receipt PDF'
+        });
+        
+        console.log('PDF shared successfully');
+      } catch (printError) {
+        console.error('Detailed print error:', printError);
+        Alert.alert('Export Error 1', `Failed to export receipt to PDF. ${printError.message}`);
+        throw new Error(`PDF generation failed: ${printError.message}`);
+      }
     } catch (error) {
       console.error('Export PDF error:', error);
-      Alert.alert('Error', 'Failed to export receipt to PDF');
+      Alert.alert('Export Error 2', `Failed to export receipt to PDF. ${error.message}`);
+      Alert.alert(
+        'Export Error',
+        'Failed to export receipt to PDF. Please try again.',
+        [{ text: 'OK' }]
+      );
     }
   };
 
@@ -377,7 +412,7 @@ const ReceiptPreview = ({ route }) => {
           <View style={styles.qrContainer}>
             <QRCode
               value={`TICKET:${formData.ticketId}`}
-              size={128}
+              size={198}
               getRef={(ref) => setQrRef(ref)}
             />
           </View> 
@@ -387,10 +422,12 @@ const ReceiptPreview = ({ route }) => {
             <FontAwesome name="print" size={24} color="#fff" />
             <Text style={styles.printButtonText}>Print Receipt</Text>
           </TouchableOpacity>
-          <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF}>
-            <FontAwesome name="file-pdf-o" size={24} color="#fff" />
-            <Text style={styles.exportButtonText}>Export to PDF</Text>
-          </TouchableOpacity>
+          {user?.email === 'astrondaniel6@gmail.com' && (
+            <TouchableOpacity style={styles.exportButton} onPress={handleExportPDF}>
+              <FontAwesome name="file-pdf-o" size={24} color="#fff" />
+              <Text style={styles.exportButtonText}>Export to PDF</Text>
+            </TouchableOpacity>
+          )}
         </View>
       </ScrollView>
       

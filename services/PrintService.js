@@ -29,16 +29,25 @@ const PrintService = {
       
       // Print Header
       console.log('Printing header...');
-      await BluetoothEscposPrinter.printText("LINK BUS TICKET\n\n", {
+      await BluetoothEscposPrinter.printText("LINK BUS TICKET\n", {
         fonttype: 1,
         widthtimes: 1,
         heigthtimes: 1
       });
       
       // Print Contact Info
-      await BluetoothEscposPrinter.printText("+256 751206424 | +256 782099992\n", {});
-      await BluetoothEscposPrinter.printText("1st Floor Solar House\n", {});
-      await BluetoothEscposPrinter.printText("Plot 63 Muteesa I Road Katwe\n", {});
+      await BluetoothEscposPrinter.printText("+256 751206424 | +256 782099992\n", { 
+        widthtimes: 0.5,
+        heigthtimes: 0.5
+      });
+      await BluetoothEscposPrinter.printText("1st Floor Solar House\n", {
+        widthtimes: 0.5,
+        heigthtimes: 0.5
+      });
+      await BluetoothEscposPrinter.printText("Plot 63 Muteesa I Road Katwe\n", {
+        widthtimes: 0.5,
+        heigthtimes: 0.5
+      });
       await BluetoothEscposPrinter.printText(`${receiptData.numberPlatePrefix.toUpperCase()}${" "}${receiptData.numberPlatePostfix.toUpperCase()}\n`, {
         fonttype: 1,
         widthtimes: 1,
@@ -57,7 +66,7 @@ const PrintService = {
       await BluetoothEscposPrinter.printText(`To          : ${receiptData.to}\n`, {});
       await BluetoothEscposPrinter.printText(`Payment     : ${receiptData.paymentStatus?.name}\n`, {});
      
-      await BluetoothEscposPrinter.printText(`Printed by  : ${receiptData.printedBy}\n\n`, {});
+      await BluetoothEscposPrinter.printText(`Printed By  : ${receiptData.printedBy}\n`, {});
       // await BluetoothEscposPrinter.printText(`Printed on: ${receiptData.date}\n`, {});
       await BluetoothEscposPrinter.printText(`Travel Date : ${receiptData.date}\n`, {});
       await BluetoothEscposPrinter.printText("--------------------------------\n", {});
@@ -78,22 +87,22 @@ const PrintService = {
       // Print QR Code
       console.log('Printing QR code...');
   
-      await BluetoothEscposPrinter.printText("Visit link below to review Terms and Conditions\n", {
+      await BluetoothEscposPrinter.printText(`Visit link below to review Terms and\nConditions\n`, {
        
-        widthtimes: 0.7,
-        heigthtimes: 0.7
+        widthtimes: 0.5,
+        heigthtimes: 0.5
       });
       await BluetoothEscposPrinter.printText("--------------------------------\n", {});
       await BluetoothEscposPrinter.printText("www.link.co.ug/terms-of-service.php\n", {
         
-        widthtimes: 0.7,
-        heigthtimes: 0.7
+        widthtimes: 0.5,
+        heigthtimes: 0.5
       });
       await BluetoothEscposPrinter.printText("--------------------------------\n", {});
       await BluetoothEscposPrinter.printText("Thank you for travelling with us\n\n", {
         
-        widthtimes: 0.7,
-        heigthtimes: 0.7
+        widthtimes: 0.5,
+        heigthtimes: 0.5
       });
       await BluetoothEscposPrinter.printQRCode(`TICKET:${receiptData.ticketId}`, 400, BluetoothEscposPrinter.ERROR_CORRECTION.L);
       

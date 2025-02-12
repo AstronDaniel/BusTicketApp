@@ -8,14 +8,14 @@ import {
   Image,
   ScrollView,
   ActivityIndicator,
-  Alert
+  StatusBar
 } from 'react-native';
 import { AuthContext } from "../contexts/AuthContext";
 import { LinearGradient } from 'expo-linear-gradient';
 import { MaterialIcons, FontAwesome5 } from '@expo/vector-icons';
 import { db } from '../config/firebase';
 import { doc, getDoc, collection, query, where, getDocs } from 'firebase/firestore';
-// import ReportService from '../services/ReportService';
+import { all } from 'axios';
 
 const HomeScreen = ({ navigation }) => {
   const { logout, user } = useContext(AuthContext);
@@ -48,10 +48,26 @@ const HomeScreen = ({ navigation }) => {
     // Fetch user-specific data
     const fetchStats = async () => {
       try {
-        const ticketsQuery = query(collection(db, 'tickets'));
-        const ticketsSnapshot = await getDocs(ticketsQuery);
-        const ticketsCount = ticketsSnapshot.size;
+        const today = new Date();
+        const day = String(today.getDate()).padStart(2, '0');
+        const month = String(today.getMonth() + 1).padStart(2, '0'); // +1 because months are 0-based
+        const year = today.getFullYear();
+        const formattedToday = `${day}-${month}-${year}`;
 
+        // Updated query to filter by both date and userId
+        const ticketsQuery = query(
+          collection(db, 'tickets'),
+          where('date', '>=', formattedToday),
+          where('userId', '==', user.uid)  // Add userId filter
+        );
+        
+        const ticketsSnapshot = await getDocs(ticketsQuery);
+        const ticketsCount = ticketsSnapshot.docs.filter(doc => {
+          const ticketDate = doc.data().date.split(' ')[0];
+          return ticketDate === formattedToday;
+        }).length; 
+
+        console.log('ticketsCount', ticketsCount);
         const passengersQuery = query(collection(db, 'passengers'), where('userId', '==', user.uid));
         const passengersSnapshot = await getDocs(passengersQuery);
         const passengersCount = passengersSnapshot.size;
@@ -66,8 +82,11 @@ const HomeScreen = ({ navigation }) => {
     const fetchUserProfile = async () => {
       try {
         const userDoc = await getDoc(doc(db, 'users', user.email));
+        
         if (userDoc.exists()) {
           const userData = userDoc.data();
+          // console.log('Current user:', userData.uid, userData.email,userData.password);
+
           setUserName(userData.firstName + ' ' + userData.lastName);
         }
       } catch (error) {
@@ -111,6 +130,7 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.scrollView}>
+      <StatusBar barStyle="light-content" />
       <LinearGradient
         colors={['#4A90E2', '#50E3C2']}
         style={styles.headerGradient}

@@ -29,8 +29,9 @@ const ReceiptPreview = ({ route }) => {
 
  
   const currentDate = new Date();
-  const formattedDate = `${currentDate.getFullYear()}-${currentDate.getMonth().toString()+ 1}-${currentDate.getDate()}`;
-  const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
+  const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
+  const formattedTime = `${String(currentDate.getHours()).padStart(2, '0')}:${String(currentDate.getMinutes()).padStart(2, '0')}`;
+
 
   useEffect(() => {
     const fetchUserProfile = async () => {

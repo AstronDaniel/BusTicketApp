@@ -207,29 +207,44 @@ const GenerateReceiptScreen = ({ navigation }) => {
       const generateTicketId = () => {
         return `${numberPlatePrefix.toUpperCase()}` + Math.random().toString(36).substring(2, 8).toUpperCase();
       };
+      
       const randomTicketId = generateTicketId();
+      
+      // Updated date handling
       const currentDate = new Date();
-      const formattedDate = `${currentDate.getDate()}-${currentDate.getMonth() + 1}-${currentDate.getFullYear()}`;
-      const formattedTime = `${currentDate.getHours()}:${currentDate.getMinutes()}`;
+      // Explicitly get each component
+      const day = String(currentDate.getDate()).padStart(2, '0');
+      const month = String(currentDate.getMonth() + 1).padStart(2, '0'); // +1 because months are 0-based
+      const year = currentDate.getFullYear();
+      const hours = String(currentDate.getHours()).padStart(2, '0');
+      const minutes = String(currentDate.getMinutes()).padStart(2, '0');
+      
+      const formattedDate = `${day}-${month}-${year}`;
+      const formattedTime = `${hours}:${minutes}`;
+      
+      // Add date verification logging
+      console.log('Raw date:', currentDate);
+      console.log('Formatted date:', formattedDate);
+      console.log('Formatted time:', formattedTime);
      
       const updatedFormData = {
         ...formData,
-        printedBy: formData.printedBy || user.email || 'Default Staff Member', // Default value if empty
-        userId: user.uid, // Include userId
-        email: user.email, // Include email
-        ticketId: formData.ticketId || randomTicketId, // Use random value if empty
+        printedBy: formData.printedBy || user.email || 'Default Staff Member',
+        userId: user.uid,
+        email: user.email,
+        ticketId: formData.ticketId || randomTicketId,
         date: `${formattedDate} ${formattedTime}`,
-        code: formData.code || randomCode, // Use random value if empty
-        numberPlatePrefix, // Added field
-        numberPlatePostfix, // Added field
-        location, // Include location data
+        code: formData.code || randomCode,
+        numberPlatePrefix,
+        numberPlatePostfix,
+        location,
       };
 
       try {
         // Save to Firestore
         await addDoc(collection(db, 'tickets'), updatedFormData);
         navigation.navigate('ReceiptPreview', { formData: updatedFormData });
-        console.log("data saved :", { formData: updatedFormData });
+        console.log("data saved with date:", { formData: updatedFormData });
       } catch (error) {
         Alert.alert('Error', 'Failed to save receipt data.');
         console.error('Error saving receipt data:', error);

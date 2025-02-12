@@ -78,11 +78,23 @@ const PrintService = {
       // Print QR Code
       console.log('Printing QR code...');
   
-      await BluetoothEscposPrinter.printText("Visit link below to review Terms and Conditions\n", {});
+      await BluetoothEscposPrinter.printText("Visit link below to review Terms and Conditions\n", {
+       
+        widthtimes: 0.7,
+        heigthtimes: 0.7
+      });
       await BluetoothEscposPrinter.printText("--------------------------------\n", {});
-      await BluetoothEscposPrinter.printText("www.link.co.ug/terms-of-service.php\n", {});
+      await BluetoothEscposPrinter.printText("www.link.co.ug/terms-of-service.php\n", {
+        
+        widthtimes: 0.7,
+        heigthtimes: 0.7
+      });
       await BluetoothEscposPrinter.printText("--------------------------------\n", {});
-      await BluetoothEscposPrinter.printText("Thank you for travelling with us\n\n", {});
+      await BluetoothEscposPrinter.printText("Thank you for travelling with us\n\n", {
+        
+        widthtimes: 0.7,
+        heigthtimes: 0.7
+      });
       await BluetoothEscposPrinter.printQRCode(`TICKET:${receiptData.ticketId}`, 400, BluetoothEscposPrinter.ERROR_CORRECTION.L);
       
       // Print Footer

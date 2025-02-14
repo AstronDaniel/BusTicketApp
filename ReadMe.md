@@ -176,6 +176,52 @@ const printReceipt = async (details) => {
 
 ---
 
+## Linking react-native-printer
+
+Since `react-native link` is deprecated, follow these steps to link `react-native-printer` manually:
+
+### iOS
+
+1. Open your project in Xcode by running `open ios/BusTicketApp.xcworkspace`.
+2. In Xcode, in the project navigator, right-click on `Libraries` ➜ `Add Files to [your project's name]`.
+3. Go to `node_modules` ➜ `react-native-printer` and add `RNPrinter.xcodeproj`.
+4. In Xcode, in the project navigator, select your project. Add `libRNPrinter.a` to your project's `Build Phases` ➜ `Link Binary With Libraries`.
+5. Run your project (`Cmd+R`).
+
+### Android
+
+1. Open `android/settings.gradle` and add the following lines:
+    ```gradle
+    include ':react-native-printer'
+    project(':react-native-printer').projectDir = new File(rootProject.projectDir, '../node_modules/react-native-printer/android')
+    ```
+
+2. Open `android/app/build.gradle` and add the following line under `dependencies`:
+    ```gradle
+    implementation project(':react-native-printer')
+    ```
+
+3. Open `android/app/src/main/java/[...]/MainApplication.java` and add the following import:
+    ```java
+    import com.pinmi.react.printer.RNPrinterPackage;
+    ```
+
+4. Add `new RNPrinterPackage()` to the list returned by the `getPackages()` method:
+    ```java
+    @Override
+    protected List<ReactPackage> getPackages() {
+        return Arrays.<ReactPackage>asList(
+            new MainReactPackage(),
+            // ...other packages
+            new RNPrinterPackage()
+        );
+    }
+    ```
+
+5. Run `react-native run-android` to see the changes.
+
+---
+
 ## **Testing**
 1. Test the app using Expo Go on both Android and iOS devices.
 2. Use physical devices to test Bluetooth printer connectivity.

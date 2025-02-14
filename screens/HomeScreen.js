@@ -130,7 +130,7 @@ const HomeScreen = ({ navigation }) => {
 
   return (
     <ScrollView style={styles.scrollView}>
-      <StatusBar barStyle="light-content" />
+      <StatusBar barStyle="light-content" backgroundColor={'#222'}/>
       <LinearGradient
         colors={['#4A90E2', '#50E3C2']}
         style={styles.headerGradient}

@@ -11,27 +11,23 @@ import BluetoothDeviceSelector from '../components/BluetoothDeviceSelector';
 import { FontAwesome } from '@expo/vector-icons';
 import * as Print from 'expo-print';
 import * as Sharing from 'expo-sharing';
-
-
-
+import AsyncStorage from '@react-native-async-storage/async-storage'; // Import AsyncStorage
 
 const formatAmount = (amount) => {
   return amount.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
 };
- 
+
 const ReceiptPreview = ({ route }) => {
   const { formData } = route.params || {};
   const { user } = useContext(AuthContext);
   const [staffName, setStaffName] = useState('Staff Member');
   const [showDeviceSelector, setShowDeviceSelector] = useState(false);
   const [qrRef, setQrRef] = useState(null);
-  
+  const [lastConnectedPrinter, setLastConnectedPrinter] = useState(null); // Add state for last connected printer
 
- 
   const currentDate = new Date();
   const formattedDate = `${currentDate.getFullYear()}-${String(currentDate.getMonth() + 1).padStart(2, '0')}-${String(currentDate.getDate()).padStart(2, '0')}`;
   const formattedTime = `${String(currentDate.getHours()).padStart(2, '0')}:${String(currentDate.getMinutes()).padStart(2, '0')}`;
-
 
   useEffect(() => {
     const fetchUserProfile = async () => {
@@ -51,17 +47,33 @@ const ReceiptPreview = ({ route }) => {
     }
   }, [user]);
 
+  // Load the last connected printer on component mount
+  useEffect(() => {
+    const loadLastPrinter = async () => {
+      try {
+        const savedPrinter = await AsyncStorage.getItem('lastConnectedPrinter');
+        if (savedPrinter) {
+          setLastConnectedPrinter(JSON.parse(savedPrinter));
+        }
+      } catch (error) {
+        console.error('Error loading last printer:', error);
+      }
+    };
+    
+    loadLastPrinter();
+  }, []);
+
   const requestPermissions = async () => {
     try {
       let permissionsToRequest = [];
-      
+
       if (Platform.OS === 'android') {
         if (Platform.Version >= 31) {
           permissionsToRequest = [
             PERMISSIONS.ANDROID.BLUETOOTH_CONNECT,
             PERMISSIONS.ANDROID.BLUETOOTH_SCAN
           ];
-        } else { 
+        } else {
           permissionsToRequest = [
             PERMISSIONS.ANDROID.ACCESS_FINE_LOCATION,
             PERMISSIONS.ANDROID.ACCESS_COARSE_LOCATION
@@ -70,7 +82,7 @@ const ReceiptPreview = ({ route }) => {
       }
 
       const isEnabled = await BluetoothManager.isBluetoothEnabled();
-      
+
       if (!isEnabled) {
         Alert.alert('Bluetooth Required', 'Please enable Bluetooth to print receipts');
         return false;
@@ -79,16 +91,16 @@ const ReceiptPreview = ({ route }) => {
       const results = await Promise.all(
         permissionsToRequest.map(async (permission) => {
           const result = await check(permission);
-          
+
           if (result === RESULTS.DENIED) {
             const requestResult = await request(permission);
             return requestResult;
           }
-          
+
           return result;
         })
       );
-      
+
       const allGranted = results.every(
         result => result === RESULTS.GRANTED
       );
@@ -123,23 +135,51 @@ const ReceiptPreview = ({ route }) => {
         return;
       }
 
-      setShowDeviceSelector(true);
+      // If we have a last connected printer, try to use it directly
+      if (lastConnectedPrinter) {
+        try {
+          await PrintService.connectPrinter(lastConnectedPrinter);
+          const receiptData = {
+            ...formData,
+            date: `${formattedDate}`,
+            amountPaid: formatAmount(formData.amountPaid),
+          };
+          
+          await PrintService.printReceipt(receiptData);
+          Alert.alert('Success', 'Receipt printed successfully!');
+          return;
+        } catch (error) {
+          console.error('Failed to print with saved printer:', error);
+          // If printing with saved printer fails, fall back to device selector
+          setShowDeviceSelector(true);
+        }
+      } else {
+        // No saved printer, show device selector
+        setShowDeviceSelector(true);
+      }
     } catch (error) {
       console.error('Print error:', error);
       Alert.alert('Error', error.message);
     }
   };
- 
+
   const handleDeviceSelected = async (device) => {
     setShowDeviceSelector(false);
     try {
       await PrintService.connectPrinter(device);
       
+      // Save the selected printer
+      try {
+        await AsyncStorage.setItem('lastConnectedPrinter', JSON.stringify(device));
+        setLastConnectedPrinter(device);
+      } catch (error) {
+        console.error('Error saving printer:', error);
+      }
+      
       const receiptData = {
         ...formData,
         date: `${formattedDate}`,
         amountPaid: formatAmount(formData.amountPaid),
-       
       };
       
       await PrintService.printReceipt(receiptData);
@@ -148,6 +188,41 @@ const ReceiptPreview = ({ route }) => {
       console.error('Print error:', error);
       Alert.alert('Error', error.message);
     }
+  };
+
+  // Add this function to clear saved printer if needed
+  const clearSavedPrinter = async () => {
+    try {
+      await AsyncStorage.removeItem('lastConnectedPrinter');
+      setLastConnectedPrinter(null);
+      Alert.alert('Success', 'Saved printer cleared. You will need to select a printer next time.');
+    } catch (error) {
+      console.error('Error clearing printer:', error);
+      Alert.alert('Error', 'Failed to clear saved printer');
+    }
+  };
+
+  // Add a long press handler to the print button to clear saved printer
+  const handleLongPressPrint = () => {
+    Alert.alert(
+      'Printer Options',
+      'What would you like to do?',
+      [
+        {
+          text: 'Clear Saved Printer',
+          onPress: clearSavedPrinter,
+          style: 'destructive',
+        },
+        {
+          text: 'Select New Printer',
+          onPress: () => setShowDeviceSelector(true),
+        },
+        {
+          text: 'Cancel',
+          style: 'cancel',
+        },
+      ]
+    );
   };
 
   const handleExportPDF = async () => {
@@ -419,7 +494,12 @@ const ReceiptPreview = ({ route }) => {
           </View> 
         </View>
         <View style={styles.buttonContainer}>
-          <TouchableOpacity style={styles.printButton} onPress={handlePrint}>
+          <TouchableOpacity 
+            style={styles.printButton} 
+            onPress={handlePrint}
+            onLongPress={handleLongPressPrint}
+            delayLongPress={500}
+          >
             <FontAwesome name="print" size={24} color="#fff" />
             <Text style={styles.printButtonText}>Print Receipt</Text>
           </TouchableOpacity>
@@ -471,12 +551,10 @@ const styles = StyleSheet.create({
     textAlign: 'center',
   },
   numberPlate: {
-   
-    display:'flex',
-    flexDirection:'row',
-    
-    justifyContent:'center',
-    gap:15
+    display: 'flex',
+    flexDirection: 'row',
+    justifyContent: 'center',
+    gap: 15
   },
   heading: {
     fontSize: 18,
@@ -514,7 +592,7 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     borderColor: '#888',
     marginVertical: 16,
-    fontWeight:'bold',
+    fontWeight: 'bold',
   },
   amount: {
     fontSize: 20,
